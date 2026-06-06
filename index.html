@@ -1,24 +1,126 @@
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rin9's Website</title>
+    
+    <!-- 引入外部CSS美化文件 -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
 
-<h1>"Rin9's Website"</h1>
-<p>"欢迎你的到来~~~~"</p>
-<p>我们需要完全使用标签来实现这个东西吗？</p>
-<h5>好吧看来我们的网站不能只用一个标签来实现</h5>
-<h5>好吧看来在文本里面加标签也是不能做到的我们不能把标签加入段落和标题里面,这太坏了,而且我们现在用的这个也是标题而不是段落,OMG!!</h5>
-<p> 看见了没这个是<a href="https://www.bilibili.com/">bilibili</a>哦</p>
-<img src="/neocities.png">
-<p>太棒了，现在我们已经添加了一个图片？但是我们还是需要更多的图片来装饰问我们的网站诶……</p>
+    <div class="container">
+        
+        <!-- 顶部卡片：音乐与问候 -->
+        <div class="card glass">
+            <h1>🎐 Rin9's Website</h1>
+            
+            <!-- 1. 背景音乐播放器（自动播放） -->
+            <audio id="bgm" loop autoplay>
+                <source src="music/bgm.mp3" type="audio/mpeg">
+                您的浏览器不支持音频播放。
+            </audio>
+            
+            <!-- 音乐开关按钮 -->
+            <button id="musicBtn" class="btn-music">🔇 暂停音乐</button>
+            
+            欢迎你的到来~~~~
+        </div>
 
+        <!-- 中部卡片：快捷入口 -->
+        <div class="card">
+            <h2>✨ 常用链接</h2>
+            <div class="links-grid">
+                <a href="https://bilibili.com" target="_blank" class="link-item">
+                    <div class="icon">📺</div>
+                    <span>bilibili</span>
+                </a>
+                <a href="#" class="link-item">
+                    <div class="icon">🧶</div>
+                    <span>yarn</span>
+                </a>
+                <a href="#" class="link-item">
+                    <div class="icon">🌿</div>
+                    <span>catnip</span>
+                </a>
+                <!-- 可以继续复制上面一行添加新链接 -->
+            </div>
+        </div>
 
-<h2>这里是一个标题</h2>
+        <!-- 底部卡片：图片轮播 -->
+        <div class="card">
+            <h2>🖼️ 照片墙</h2>
+            <div class="carousel">
+                <!-- 轮播图片容器 -->
+                <div class="carousel-inner">
+                    <img src="img/banner.jpg" alt="Slide 1">
+                    <!-- 如果有更多图，继续往这里面加 -->
+                    <!-- <img src="img/photo2.jpg" alt="Slide 2"> -->
+                </div>
+                
+                <!-- 轮播指示点 -->
+                <div class="carousel-dots">
+                    <span class="dot active" onclick="currentSlide(1)"></span>
+                    <!-- <span class="dot" onclick="currentSlide(2)"></span> -->
+                </div>
+            </div>
+        </div>
 
-<ul>
-  <li><a href="https://www.bilibili.com/">bilibili</a>
-  </li>
-  <li>yarn</li>
-  <li>catnip</li>
-</ul>
+    </div>
 
-  </body>
+    <!-- 引入JS脚本 -->
+    <script src="css/style.css"></script> 
+    <!-- 注意：由于纯静态限制，JS直接写在HTML里更简单，这里为了演示结构先这样放 -->
+    <script>
+        // 音乐控制逻辑
+        const audio = document.getElementById('bgm');
+        const btn = document.getElementById('musicBtn');
+        
+        btn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+                btn.innerText = '🔇 暂停音乐';
+            } else {
+                audio.pause();
+                btn.innerText = '🔊 播放音乐';
+            }
+        });
+
+        // 简单的轮播逻辑
+        let slideIndex = 1;
+        showSlides(slideIndex);
+
+        function currentSlide(n) {
+            showSlides(slideIndex = n);
+        }
+
+        function showSlides(n) {
+            let i;
+            let slides = document.querySelectorAll('.carousel-inner img');
+            let dots = document.querySelectorAll('.dot');
+            
+            if (n > slides.length) { slideIndex = 1 }
+            if (n < 1) { slideIndex = slides.length }
+            
+            for (i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";
+            }
+            for (i = 0; i < dots.length; i++) {
+                dots[i].className = dots[i].className.replace(" active", "");
+            }
+            
+            if (slides[slideIndex-1]) {
+                slides[slideIndex-1].style.display = "block";
+                dots[slideIndex-1].className += " active";
+            }
+        }
+
+        // 自动轮播
+        setInterval(() => {
+            slideIndex++;
+            showSlides(slideIndex);
+        }, 3000); // 3秒切换一次
+    </script>
+</body>
 </html>

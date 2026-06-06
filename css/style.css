@@ -1,0 +1,128 @@
+/* --- 基础设置 --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); /* 深蓝紫渐变背景 */
+    color: #e0e0e0;
+    font-family: "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* --- 卡片通用样式 (玻璃拟态风) --- */
+.card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px); /* 毛玻璃效果 */
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+h1, h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(128, 0, 255, 0.5);
+}
+
+/* --- 音乐按钮 --- */
+.btn-music {
+    display: block;
+    margin: 15px auto;
+    padding: 8px 20px;
+    background: #6a11cb;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: transform 0.2s;
+}
+
+.btn-music:hover {
+    transform: scale(1.05);
+}
+
+/* --- 快捷入口网格 --- */
+.links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.link-item {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    text-decoration: none;
+    color: #c8b6ff;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.link-item:hover {
+    background: rgba(108, 99, 255, 0.2);
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(108, 99, 255, 0.2);
+    border-color: #6c63ff;
+}
+
+.link-item .icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+/* --- 轮播图样式 --- */
+.carousel {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 15px;
+    aspect-ratio: 16 / 9; /* 保持宽高比 */
+}
+
+.carousel-inner {
+    width: 100%;
+    height: 100%;
+}
+
+.carousel-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 裁剪填满 */
+    display: none; /* 默认隐藏，JS控制显示 */
+    border-radius: 15px;
+}
+
+.carousel-dots {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.dot {
+    cursor: pointer;
+    height: 12px;
+    width: 12px;
+    margin: 0 5px;
+    background-color: #555;
+    border-radius: 50%;
+    display: inline-block;
+    transition: background-color 0.6s ease;
+}
+
+.dot.active, .dot:hover {
+    background-color: #a78bfa;
+}
