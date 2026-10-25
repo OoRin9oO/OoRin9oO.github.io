@@ -96,6 +96,21 @@
             </a>`).join("");
     }
 
+    /* ---------- 渲染：成长里程碑 ---------- */
+    function renderMilestones() {
+        const box = $("#milestoneList");
+        if (!box || !D.milestones) return;
+        box.innerHTML = D.milestones.map(m => `
+            <article class="milestone">
+                <div class="milestone-icon">${m.icon || "✦"}</div>
+                <div class="milestone-body">
+                    <div class="entry-date">${m.date || ""}</div>
+                    <div class="milestone-title">${m.title || ""}</div>
+                    <p class="entry-text">${m.desc || ""}</p>
+                </div>
+            </article>`).join("");
+    }
+
     /* ---------- 渲染：作品集 + 分类筛选 ---------- */
     const STATUS_TEXT = { done: "已完成", wip: "进行中", plan: "规划中" };
 
@@ -106,6 +121,7 @@
 
         grid.innerHTML = D.works.map(w => `
             <article class="work-card" data-tags="${w.tags.join(",")}">
+                ${w.cover ? `<div class="work-cover"><img src="${w.cover}" alt="${w.title}" loading="lazy"></div>` : ""}
                 <div class="work-top">
                     <div class="work-title">${w.title}</div>
                     <span class="badge ${w.status}">${STATUS_TEXT[w.status] || w.status}</span>
@@ -147,6 +163,9 @@
                 <div class="entry-date">${n.date}</div>
                 <div class="entry-title">${n.title}</div>
                 <p class="entry-text">${n.desc}</p>
+                ${n.images && n.images.length ? `<div class="entry-imgs">
+                    ${n.images.map((src, i) => `<img src="${src}" alt="" loading="lazy" data-zoom="${src}">`).join("")}
+                </div>` : ""}
             </article>`).join("");
     }
 
@@ -187,22 +206,34 @@
         const lbCap = $("#lightboxCap");
         if (!lb) return;
 
+        const open = (src, caption) => {
+            lbImg.src = src;
+            lbImg.alt = caption || "";
+            lbCap.textContent = caption || "";
+            lb.classList.add("open");
+            document.body.style.overflow = "hidden";
+        };
+        const close = () => {
+            lb.classList.remove("open");
+            document.body.style.overflow = "";
+        };
+
+        // 照片墙
         $("#galleryGrid")?.addEventListener("click", (e) => {
             const item = e.target.closest(".gallery-item");
             if (!item) return;
             const g = D.gallery[Number(item.dataset.index)];
             if (!g) return;
-            lbImg.src = g.src;
-            lbImg.alt = g.caption;
-            lbCap.textContent = g.caption;
-            lb.classList.add("open");
-            document.body.style.overflow = "hidden";
+            open(g.src, g.caption);
         });
 
-        const close = () => {
-            lb.classList.remove("open");
-            document.body.style.overflow = "";
-        };
+        // 日常记录配图（点击放大）
+        $("#notesList")?.addEventListener("click", (e) => {
+            const img = e.target.closest("[data-zoom]");
+            if (!img) return;
+            open(img.dataset.zoom, img.alt || "");
+        });
+
         lb.addEventListener("click", (e) => {
             if (e.target === lb || e.target.classList.contains("lightbox-close")) close();
         });
@@ -254,6 +285,7 @@
     /* ---------- 启动 ---------- */
     renderProfile();
     renderLinks();
+    renderMilestones();
     renderWorks();
     renderNotes();
     renderGallery();

@@ -1,0 +1,8 @@
+{
+  "_说明": "把要投递的内容写在这里，然后运行 python tools/ingest.py。图片先放进 inbox/ 目录，用 IMG:文件名 引用。用不到的键删掉即可。",
+  "date": "",
+  "notes": [],
+  "works": [],
+  "milestones": [],
+  "gallery": []
+}
