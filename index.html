@@ -1,127 +1,124 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rin9's Website</title>
-    
-    <!-- 引入外部CSS美化文件 -->
+    <meta name="description" content="Rin9 的个人网站，记录日常与未来作品集。">
+    <meta name="author" content="Rin9">
+
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="img/profile.jpg">
 </head>
 <body>
 
+    <!-- ============ 顶部导航 ============ -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#home" class="nav-brand">🎐 Rin9</a>
+
+            <div class="nav-links" id="navLinks">
+                <a href="#home">首页</a>
+                <a href="#links">链接</a>
+                <a href="#works">作品集</a>
+                <a href="#notes">日常记录</a>
+                <a href="#gallery">照片墙</a>
+            </div>
+
+            <div class="nav-tools">
+                <button class="icon-btn" id="themeBtn" aria-label="切换主题">☀️</button>
+                <button class="icon-btn nav-toggle" id="navToggle" aria-label="打开菜单">☰</button>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
-        
-        <!-- 顶部卡片：音乐与问候 -->
-        <div class="card glass">
-            <h1>🎐 Rin9's Website</h1>
-            
-            <!-- 1. 背景音乐播放器（自动播放） -->
-            <audio id="bgm" loop autoplay>
-                <source src="music/音楽室 - 日向文.mp3" type="audio/mpeg">
-                您的浏览器不支持音频播放。
-            </audio>
-            
-            <!-- 音乐开关按钮 -->
-            <button id="musicBtn" class="btn-music">🔇 暂停音乐</button>
-            
-            欢迎你的到来~~~~
-        </div>
 
-        <!-- 中部卡片：快捷入口 -->
-        <div class="card">
-            <h2>✨ 常用链接</h2>
-            <div class="links-grid">
-                <a href="https://bilibili.com" target="_blank" class="link-item">
-                    <div class="icon">📺</div>
-                    <span>bilibili</span>
-                </a>
-                <a href="#" class="link-item">
-                    <div class="icon">🧶</div>
-                    <span>yarn</span>
-                </a>
-                <a href="#" class="link-item">
-                    <div class="icon">🌿</div>
-                    <span>catnip</span>
-                </a>
-                <!-- 可以继续复制上面一行添加新链接 -->
-            </div>
-        </div>
+        <!-- ============ Hero ============ -->
+        <header class="hero" id="home">
+            <img class="avatar" id="avatar" src="img/profile.jpg" alt="头像">
 
-        <!-- 底部卡片：图片轮播 -->
-        <div class="card">
-            <h2>🖼️ 照片墙</h2>
-            <div class="carousel">
-                <!-- 轮播图片容器 -->
-                <div class="carousel-inner">
-                    <img src="img/webbg.jpg" alt="Slide 1">
-                    <img src="img/profile.png" alt="Slide 2">
-                    <!-- 如果有更多图，继续往这里面加 -->
-                    <!-- <img src="img/photo2.jpg" alt="Slide 2"> -->
+            <div class="hero-body">
+                <span class="hero-tag" id="heroTagline">日常记录 · 未来作品集</span>
+                <h1 id="heroName">Rin9's Website</h1>
+                <p id="heroIntro">欢迎你的到来~~~~</p>
+
+                <div class="hero-actions">
+                    <a class="btn" href="#works">看作品集</a>
+                    <button class="btn ghost" id="musicBtn" aria-pressed="false">🔇 播放音乐</button>
                 </div>
-                
-                <!-- 轮播指示点 -->
-                <div class="carousel-dots">
-                    <span class="dot active" onclick="currentSlide(1)"></span>
-                    <!-- <span class="dot" onclick="currentSlide(2)"></span> -->
-                </div>
+
+                <!-- 背景音乐：优先用 data.js 里配置的路径 -->
+                <audio id="bgm" loop preload="none">
+                    <source id="bgmSource" src="music/bgm.wav" type="audio/wav">
+                    您的浏览器不支持音频播放。
+                </audio>
             </div>
-        </div>
+        </header>
+
+        <!-- ============ 常用链接 ============ -->
+        <section class="section" id="links">
+            <div class="section-head">
+                <h2>✨ 常用链接</h2>
+                <p>常去的地方，点一下就过去</p>
+            </div>
+            <div class="card reveal">
+                <div class="links-grid" id="linksGrid"></div>
+            </div>
+        </section>
+
+        <!-- ============ 作品集 ============ -->
+        <section class="section" id="works">
+            <div class="section-head">
+                <h2>🧩 作品集</h2>
+                <p>在做的和做完的东西，慢慢添</p>
+            </div>
+            <div class="filter-bar" id="filterBar"></div>
+            <div class="works-grid" id="worksGrid"></div>
+        </section>
+
+        <!-- ============ 日常记录 ============ -->
+        <section class="section" id="notes">
+            <div class="section-head">
+                <h2>📔 日常记录</h2>
+                <p>一些碎碎念，按时间往下翻</p>
+            </div>
+            <div class="timeline" id="notesList"></div>
+        </section>
+
+        <!-- ============ 照片墙 ============ -->
+        <section class="section" id="gallery">
+            <div class="section-head">
+                <h2>🖼️ 照片墙</h2>
+                <p>点开看大图</p>
+            </div>
+            <div class="gallery" id="galleryGrid"></div>
+        </section>
+
+        <!-- ============ 页脚 ============ -->
+        <footer class="footer">
+            <div class="footer-links">
+                <a href="https://github.com/OoRin9oO" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://bilibili.com" target="_blank" rel="noopener">bilibili</a>
+                <a href="mailto:your-mail@example.com">联系我</a>
+            </div>
+            <div>© <span id="year">2026</span> Rin9 · 用 GitHub Pages 托管</div>
+        </footer>
 
     </div>
 
-    <!-- 引入JS脚本 -->
-    <script src="css/style.css"></script> 
-    <!-- 注意：由于纯静态限制，JS直接写在HTML里更简单，这里为了演示结构先这样放 -->
-    <script>
-        // 音乐控制逻辑
-        const audio = document.getElementById('bgm');
-        const btn = document.getElementById('musicBtn');
-        
-        btn.addEventListener('click', () => {
-            if (audio.paused) {
-                audio.play();
-                btn.innerText = '🔇 暂停音乐';
-            } else {
-                audio.pause();
-                btn.innerText = '🔊 播放音乐';
-            }
-        });
+    <!-- ============ 灯箱 ============ -->
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" aria-label="关闭">✕</button>
+        <img id="lightboxImg" src="" alt="">
+        <div class="lightbox-cap" id="lightboxCap"></div>
+    </div>
 
-        // 简单的轮播逻辑
-        let slideIndex = 1;
-        showSlides(slideIndex);
+    <!-- 回到顶部 -->
+    <button class="to-top" id="toTop" aria-label="回到顶部">↑</button>
 
-        function currentSlide(n) {
-            showSlides(slideIndex = n);
-        }
-
-        function showSlides(n) {
-            let i;
-            let slides = document.querySelectorAll('.carousel-inner img');
-            let dots = document.querySelectorAll('.dot');
-            
-            if (n > slides.length) { slideIndex = 1 }
-            if (n < 1) { slideIndex = slides.length }
-            
-            for (i = 0; i < slides.length; i++) {
-                slides[i].style.display = "none";
-            }
-            for (i = 0; i < dots.length; i++) {
-                dots[i].className = dots[i].className.replace(" active", "");
-            }
-            
-            if (slides[slideIndex-1]) {
-                slides[slideIndex-1].style.display = "block";
-                dots[slideIndex-1].className += " active";
-            }
-        }
-
-        // 自动轮播
-        setInterval(() => {
-            slideIndex++;
-            showSlides(slideIndex);
-        }, 300000); // 3秒切换一次
-    </script>
+    <!-- 数据先行，视图随后 -->
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
