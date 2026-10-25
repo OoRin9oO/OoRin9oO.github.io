@@ -5,6 +5,8 @@
    也可以不手改这个文件：
    把图片和文案丢进 inbox/，运行 python tools/ingest.py
    脚本会自动压图、归档、并把内容合并进这里
+
+   图片命名规范：字母-日期-字母（如 a-20261025-a.webp）
    ============================================================ */
 
 window.SITE_DATA = {
@@ -47,7 +49,8 @@ window.SITE_DATA = {
             title: "决定认真做作品",
             desc: "不再只收藏别人的代码，开始把自己的东西一个个做出来。",
             icon: "🎯"
-        }],
+        }
+    ],
 
     /* ---------- 作品集 ----------
        status 可填: done（完成）/ wip（进行中）/ plan（规划中）
@@ -59,7 +62,7 @@ window.SITE_DATA = {
             title: "这个网站本身",
             desc: "纯静态的个人主页，记录日常与作品。GitHub Pages 托管，没有后端，加内容只改一个数据文件。",
             status: "wip",
-            cover: "img/shot-04.jpg",
+            cover: "img/a-20261025-a.webp",
             tags: ["HTML", "CSS", "JavaScript"],
             links: [
                 { label: "源码", url: "https://github.com/OoRin9oO/OoRin9oO.github.io" }
@@ -76,7 +79,7 @@ window.SITE_DATA = {
             desc: "又一个占位。分类标签会自动汇总到作品集上方的筛选条里。",
             status: "plan",
             tags: ["待定"]
-        },
+        }
     ],
 
     /* ---------- 日常记录 ----------
@@ -88,7 +91,7 @@ window.SITE_DATA = {
             date: "2026-10-25",
             title: "网站重构",
             desc: "把原来的三张卡片拆成了导航、链接、作品集、日常记录、照片墙五个板块，背景音乐也修好了。",
-            images: ["img/shot-02.jpg", "img/shot-03.jpg"]
+            images: ["img/b-20261025-b.webp", "img/c-20261025-c.webp"]
         },
         {
             date: "2026-09-18",
@@ -99,13 +102,21 @@ window.SITE_DATA = {
             date: "2026-08-02",
             title: "一个安静的日子",
             desc: "下午下了场雨，把窗户开着听了一会儿。这种时刻适合什么也不做。"
-        }],
+        }
+    ],
 
-    /* ---------- 照片墙 ---------- */
+    /* ---------- 照片墙 ----------
+       图片按原始比例完整显示，不裁剪、不拉伸
+       文件名规范：字母-日期-字母（如 a-20261025-a.webp）
+    */
     gallery: [
-        { src: "img/shot-01.jpg", caption: "黄昏的天空" },
-        { src: "img/shot-02.jpg", caption: "窗边" },
-        { src: "img/shot-03.jpg", caption: "午后" },
-        { src: "img/shot-04.jpg", caption: "随手一拍" },
-        { src: "img/profile.jpg", caption: "本人" }]
+        { src: "img/a-20261025-a.webp", caption: "章鱼与猫耳少女" },
+        { src: "img/b-20261025-b.webp", caption: "楼梯上的便当" },
+        { src: "img/c-20261025-c.webp", caption: "纸箱与章鱼精灵" },
+        { src: "img/d-20261025-d.webp", caption: "拉章鱼" },
+        { src: "img/e-20261025-e.webp", caption: "冬日比心" },
+        { src: "img/f-20261025-f.webp", caption: "荆棘与红瞳" },
+        { src: "img/g-20261025-g.webp", caption: "白发的招呼" },
+        { src: "img/h-20261025-h.webp", caption: "粉发的兔耳" }
+    ]
 };
