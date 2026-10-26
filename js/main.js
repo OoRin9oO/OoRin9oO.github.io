@@ -196,6 +196,12 @@
             const src = $("#bgmSource");
             if (src) src.src = p.bgm;
         }
+        // 页脚邮箱跟着 profile.email 走，别再硬编码在 HTML 里
+        const mail = $("#mailLink");
+        if (mail && p.email) {
+            mail.textContent = p.email;
+            mail.href = "mailto:" + p.email;
+        }
         document.title = p.name + "'s Website";
     }
 

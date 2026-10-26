@@ -111,7 +111,6 @@
                 }).join(",\n");
                 return "{\n" + body + "\n" + pad + "}";
             }
-
             return q(val);
         }
 
@@ -119,11 +118,44 @@
 `/* ============================================================
    站点内容数据 —— 由 Rin9 网站编辑器生成
    也可以手改；改完记得保持下面的结构完整
+
+   板块说明：
+     profile    基本资料（名字、简介、头像、背景音乐、邮箱）
+     links      常用链接
+     milestones 成长里程碑（按时间倒序，最新的放最前）
+     works      作品集（status: done 完成 / wip 进行中 / plan 规划中）
+     notes      日常记录（images 配图可点击放大）
+     gallery    照片墙（按原始比例完整显示，不裁剪）
+
+   图片命名规范：字母-日期-字母（如 a-20261025-a.webp）
    ============================================================ */
 
 window.SITE_DATA = `;
 
-        return header + dump(clean, 0) + ";\n";
+        // 顶层各板块前加一行说明，方便以后手改时知道每个字段干什么
+        const SEC_COMMENT = {
+            profile: "基本资料",
+            links: "常用链接",
+            milestones: "成长里程碑（按时间倒序，最新的放最前）",
+            works: "作品集（status: done 完成 / wip 进行中 / plan 规划中）",
+            notes: "日常记录（images 配图可点击放大）",
+            gallery: "照片墙（按原始比例完整显示，不裁剪）",
+        };
+
+        function dumpTop(val, indent) {
+            const pad = " ".repeat(indent);
+            const parts = Object.keys(val).map(k => {
+                const v = val[k];
+                const vStr = (v && typeof v === "object")
+                    ? dump(v, indent + 4)
+                    : JSON.stringify(v == null ? "" : v);
+                const cmt = SEC_COMMENT[k] ? "  /* " + SEC_COMMENT[k] + " */" : "";
+                return pad + "    " + k + ": " + vStr + cmt;
+            });
+            return "{\n" + parts.join(",\n") + "\n" + pad + "}";
+        }
+
+        return header + dumpTop(clean, 0) + ";\n";
     }
 
     /* ============================================================
