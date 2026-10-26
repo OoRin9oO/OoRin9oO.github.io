@@ -111,6 +111,18 @@ window.SITE_DATA = {
     milestones: [
         {
             date: "2026-10-26",
+            title: "给网站造了一个懂我意图的编辑器",
+            desc: "拖图进去，它知道该放封面还是配图；页面布局可以直接拖着摆，还能钉住、隐藏、撤销重做。改网站不再是一件需要鼓勇气的事。",
+            icon: "🧩"
+        },
+        {
+            date: "2026-10-26",
+            title: "音乐按钮终于有了用",
+            desc: "上传歌曲、建歌单、随手切歌，还留了一个「听更多我推荐的音乐」的门，通向站外的世界。",
+            icon: "🎵"
+        },
+        {
+            date: "2026-10-26",
             title: "为网站制作了一个更加便捷的编辑器",
             desc: "为自己的网站添加了更多的信息，同时制作了一个更加便捷的编辑器",
             icon: "✦"
@@ -131,14 +143,18 @@ window.SITE_DATA = {
     works: [
         {
             title: "关于本网站",
-            desc: "纯静态的个人主页，记录日常与作品。GitHub Pages 托管，没有后端，加内容只改一个数据文件。",
+            desc: "纯静态的个人主页，记录日常与作品。GitHub Pages 托管，没有后端。配套做了一个可视化编辑器：拖图自动排版、页面布局直接拖着摆、撤销重做、音乐聚合器，改完点一下就上线。",
             status: "wip",
             cover: "img/a-20261025-a.webp",
-            tags: ["HTML", "CSS", "JavaScript"],
+            tags: ["HTML", "CSS", "JavaScript", "自研工具"],
             links: [
                 {
                     label: "源码",
                     url: "https://github.com/OoRin9oO/OoRin9oO.github.io"
+                },
+                {
+                    label: "编辑器",
+                    url: "https://github.com/OoRin9oO/OoRin9oO.github.io/blob/main/admin.html"
                 }
             ]
         },
