@@ -6,7 +6,9 @@
 (function () {
     "use strict";
 
-    const D = window.SITE_DATA;
+    // 数据引用，编辑器替换 SITE_DATA 后会刷新
+    let D = window.SITE_DATA;
+    const refreshData = () => { D = window.SITE_DATA; return D; };
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
@@ -87,6 +89,7 @@
 
     /* ---------- 渲染：常用链接 ---------- */
     function renderLinks() {
+        refreshData();
         const box = $("#linksGrid");
         if (!box) return;
         box.innerHTML = D.links.map(l => `
@@ -98,6 +101,7 @@
 
     /* ---------- 渲染：成长里程碑 ---------- */
     function renderMilestones() {
+        refreshData();
         const box = $("#milestoneList");
         if (!box || !D.milestones) return;
         box.innerHTML = D.milestones.map(m => `
@@ -115,6 +119,7 @@
     const STATUS_TEXT = { done: "已完成", wip: "进行中", plan: "规划中" };
 
     function renderWorks() {
+        refreshData();
         const grid = $("#worksGrid");
         const bar = $("#filterBar");
         if (!grid) return;
@@ -156,6 +161,7 @@
 
     /* ---------- 渲染：日常记录 ---------- */
     function renderNotes() {
+        refreshData();
         const box = $("#notesList");
         if (!box) return;
         box.innerHTML = D.notes.map(n => `
@@ -171,6 +177,7 @@
 
     /* ---------- 渲染：照片墙 ---------- */
     function renderGallery() {
+        refreshData();
         const box = $("#galleryGrid");
         if (!box) return;
         box.innerHTML = D.gallery.map((g, i) => `
@@ -182,6 +189,7 @@
 
     /* ---------- 渲染：个人信息 ---------- */
     function renderProfile() {
+        refreshData();
         const p = D.profile;
         if ($("#heroName")) $("#heroName").textContent = p.name + "'s Website";
         if ($("#heroTitle")) $("#heroTitle").textContent = p.title;
@@ -248,6 +256,70 @@
         });
     }
 
+    /* ---------- 板块标题（从 data.sections 读） ---------- */
+    function applySectionTitles() {
+        refreshData();
+        const S = D.sections || {};
+        Object.keys(S).forEach(id => {
+            const sec = document.getElementById(id);
+            if (!sec) return;
+            const cfg = S[id] || {};
+            const h2 = sec.querySelector(".section-head h2");
+            const p = sec.querySelector(".section-head p");
+            if (h2 && cfg.title) h2.textContent = cfg.title;
+            if (p && cfg.sub) p.textContent = cfg.sub;
+        });
+    }
+
+    /* ---------- 布局：板块顺序 / 钉住 / 隐藏 ---------- */
+    function applyLayout() {
+        refreshData();
+        const L = D.layout;
+        if (!L) return;
+
+        // 1. 按 order 重排板块
+        const main = document.querySelector("main") || document.body;
+        const home = $("#home");
+        const sections = $$("section[id]");
+        if (L.order && L.order.length) {
+            L.order.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) main.appendChild(el);
+            });
+            // order 里没有的板块补到后面
+            sections.forEach(el => {
+                if (!L.order.includes(el.id)) main.appendChild(el);
+            });
+        }
+
+        // 2. 隐藏 / 显示
+        const hidden = L.hidden || [];
+        sections.forEach(el => {
+            const hide = hidden.includes(el.id);
+            el.style.display = hide ? "none" : "";
+            el.dataset.hidden = hide ? "1" : "0";
+        });
+
+        // 3. 钉住
+        const pinned = L.pinned || [];
+        sections.forEach(el => {
+            const on = pinned.includes(el.id);
+            el.classList.toggle("pinned", on);
+            if (on) {
+                el.dataset.pinOrder = String(pinned.indexOf(el.id));
+            } else {
+                delete el.dataset.pinOrder;
+            }
+        });
+
+        // 4. 导航栏也跟着走
+        const links = $$("#navLinks a");
+        links.forEach(a => {
+            const id = a.getAttribute("href").slice(1);
+            a.style.display = hidden.includes(id) ? "none" : "";
+        });
+    }
+
     /* ---------- 滚动：导航高亮 / 回到顶部 / 入场动画 ---------- */
     function setupScroll() {
         const toTop = $("#toTop");
@@ -290,6 +362,8 @@
 
     /* ---------- 启动 ---------- */
     renderProfile();
+    applyLayout();
+    applySectionTitles();
     renderLinks();
     renderMilestones();
     renderWorks();
@@ -297,4 +371,16 @@
     renderGallery();
     setupLightbox();
     setupScroll();
+
+    /* 供编辑器预览用：数据被替换后重新渲染 */
+    window.__rerender = function () {
+        renderProfile();
+        applyLayout();
+        applySectionTitles();
+        renderLinks();
+        renderMilestones();
+        renderWorks();
+        renderNotes();
+        renderGallery();
+    };
 })();

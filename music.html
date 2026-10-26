@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐 · Rin9</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="img/profile.jpg">
+</head>
+<body class="music-page">
+
+    <header class="page-top">
+        <a class="back-link" href="index.html">← 回到主页</a>
+        <div class="page-top-right">
+            <button class="icon-btn" id="themeBtn" aria-label="切换主题">☀️</button>
+        </div>
+    </header>
+
+    <main class="container music-page-main">
+
+        <div class="page-hero">
+            <div class="page-hero-icon">🎧</div>
+            <h1>听更多我推荐的音乐</h1>
+            <p>这些是我常听的一些东西，点开去对应的平台继续听</p>
+        </div>
+
+        <!-- 站内歌曲 -->
+        <section class="section" id="tracks">
+            <div class="section-head">
+                <h2>🎵 站内音乐</h2>
+                <p>直接在这里播</p>
+            </div>
+            <div class="track-grid" id="trackGrid"></div>
+        </section>
+
+        <!-- 外链推荐 -->
+        <section class="section" id="recommend">
+            <div class="section-head">
+                <h2>🔗 外链推荐</h2>
+                <p>跳到平台上去听</p>
+            </div>
+            <div class="rec-list" id="recList"></div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div>© <span id="year">2026</span> Rin9 · 用 GitHub Pages 托管</div>
+        </div>
+    </footer>
+
+    <!-- 播放器（与主页共用） -->
+    <div class="music-panel" id="musicPanel" aria-hidden="true">
+        <div class="music-head">
+            <div>
+                <div class="music-title" id="musicNowTitle">未在播放</div>
+                <div class="music-artist" id="musicNowArtist">选一首歌开始吧</div>
+            </div>
+            <button class="icon-btn sm" id="musicClose" aria-label="关闭播放器">✕</button>
+        </div>
+        <div class="music-progress">
+            <span id="musicCur">0:00</span>
+            <input type="range" id="musicSeek" min="0" max="100" value="0" step="0.1">
+            <span id="musicDur">0:00</span>
+        </div>
+        <div class="music-controls">
+            <button class="icon-btn" id="musicPrev" title="上一首">⏮</button>
+            <button class="btn" id="musicToggle" style="min-width:92px">▶ 播放</button>
+            <button class="icon-btn" id="musicNext" title="下一首">⏭</button>
+            <button class="icon-btn" id="musicLoop" title="循环模式">🔁</button>
+            <button class="icon-btn" id="musicVolume" title="音量">🔊</button>
+        </div>
+        <div class="music-section">
+            <div class="music-section-head">
+                <span>歌单</span>
+                <select class="sel" id="musicPlaylistSel" style="max-width:150px"></select>
+            </div>
+            <div class="music-list" id="musicList"></div>
+        </div>
+        <a class="music-more" href="music.html">🎧 听更多我推荐的音乐 <span>→</span></a>
+    </div>
+    <div class="music-backdrop" id="musicBackdrop"></div>
+
+    <script src="js/data.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/music-page.js"></script>
+</body>
+</html>

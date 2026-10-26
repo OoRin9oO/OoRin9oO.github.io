@@ -46,10 +46,10 @@
 
                 <div class="hero-actions">
                     <a class="btn" href="#works">看作品集</a>
-                    <button class="btn ghost" id="musicBtn" aria-pressed="false">🔇 播放音乐</button>
+                    <button class="btn ghost" id="musicBtn" aria-pressed="false">🎵 音乐</button>
                 </div>
 
-                <!-- 背景音乐：优先用 data.js 里配置的路径 -->
+                <!-- 背景音乐：由音乐聚合器控制 -->
                 <audio id="bgm" loop preload="none">
                     <source id="bgmSource" src="music/bgm.wav" type="audio/wav">
                     您的浏览器不支持音频播放。
@@ -124,11 +124,51 @@
         <div class="lightbox-cap" id="lightboxCap"></div>
     </div>
 
+    <!-- ============ 音乐聚合器 ============ -->
+    <div class="music-panel" id="musicPanel" aria-hidden="true">
+        <div class="music-head">
+            <div>
+                <div class="music-title" id="musicNowTitle">未在播放</div>
+                <div class="music-artist" id="musicNowArtist">选一首歌开始吧</div>
+            </div>
+            <button class="icon-btn sm" id="musicClose" aria-label="关闭播放器">✕</button>
+        </div>
+
+        <div class="music-progress">
+            <span id="musicCur">0:00</span>
+            <input type="range" id="musicSeek" min="0" max="100" value="0" step="0.1">
+            <span id="musicDur">0:00</span>
+        </div>
+
+        <div class="music-controls">
+            <button class="icon-btn" id="musicPrev" title="上一首">⏮</button>
+            <button class="btn" id="musicToggle" style="min-width:92px">▶ 播放</button>
+            <button class="icon-btn" id="musicNext" title="下一首">⏭</button>
+            <button class="icon-btn" id="musicLoop" title="循环模式">🔁</button>
+            <button class="icon-btn" id="musicVolume" title="音量">🔊</button>
+        </div>
+
+        <div class="music-section">
+            <div class="music-section-head">
+                <span>歌单</span>
+                <select class="sel" id="musicPlaylistSel" style="max-width:150px"></select>
+            </div>
+            <div class="music-list" id="musicList"></div>
+        </div>
+
+        <a class="music-more" href="music.html">
+            🎧 听更多我推荐的音乐
+            <span>→</span>
+        </a>
+    </div>
+    <div class="music-backdrop" id="musicBackdrop"></div>
+
     <!-- 回到顶部 -->
     <button class="to-top" id="toTop" aria-label="回到顶部">↑</button>
 
     <!-- 数据先行，视图随后 -->
     <script src="js/data.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/player.js"></script>
 </body>
 </html>

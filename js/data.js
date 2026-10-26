@@ -4,6 +4,63 @@
    ============================================================ */
 
 window.SITE_DATA = {
+
+    /* ---------- 页面布局 ----------
+       控制各板块在页面上的顺序与状态，编辑器里可直接拖动调整
+       order    板块显示顺序（数组里没有的板块会排到最后）
+       pinned   钉住的板块，滚动时固定在视口顶部
+       hidden   暂时隐藏的板块（存板块 id）
+    */
+    layout: {
+        order: ["home", "milestones", "works", "notes", "gallery", "links"],
+        pinned: [],
+        hidden: []
+    },
+
+    /* ---------- 板块标题 ----------
+       每个板块的标题与副标题，编辑器里可改
+    */
+    sections: {
+        links: { title: "✨ 常用链接", sub: "常去的地方，点一下就过去" },
+        milestones: { title: "🏔️ 成长里程碑", sub: "那些回想起来会感慨的时刻" },
+        works: { title: "🧩 作品集", sub: "在做的和做完的东西，慢慢添" },
+        notes: { title: "📔 日常记录", sub: "一些碎碎念，按时间往下翻" },
+        gallery: { title: "🖼️ 照片墙", sub: "点开看大图" }
+    },
+
+    /* ---------- 音乐库 ----------
+       tracks     上传的音乐，src 指向 music/ 目录下的文件
+       playlists  歌单，tracks 存 track 的 id
+       recommend  外链推荐（跳转到外部平台），展示在 music.html
+    */
+    music: {
+        tracks: [
+            {
+                id: "t1",
+                title: "默认背景音乐",
+                artist: "合成音",
+                src: "music/bgm.wav",
+                cover: ""
+            }
+        ],
+        playlists: [
+            {
+                id: "p1",
+                name: "默认列表",
+                desc: "开站即听的那些",
+                tracks: ["t1"]
+            }
+        ],
+        recommend: [
+            {
+                id: "r1",
+                title: "在网易云发现更多",
+                desc: "收藏夹里的常听列表",
+                url: "https://music.163.com",
+                platform: "网易云音乐"
+            }
+        ]
+    },
     profile: {
         name: "Rin9",
         title: "日常记录 · 未来作品集",

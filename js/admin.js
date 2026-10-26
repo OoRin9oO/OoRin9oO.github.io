@@ -28,7 +28,85 @@
         repo: localStorage.getItem("rin9-repo") || REPO.repo,
         branch: localStorage.getItem("rin9-branch") || REPO.branch,
         compress: null,      // 图片压缩设置
+        history: [],         // 撤销栈：SITE_DATA 的深拷贝快照
+        hIndex: -1,          // 当前所在的历史位置
+        hMax: 60,            // 最多保留多少步
     };
+
+    /* ============================================================
+       撤销 / 重做
+       —— 快照式：每次结构性改动前存一份深拷贝
+       ============================================================ */
+    function snapshot() {
+        // 深拷贝，但跳过内部 __uid
+        return JSON.parse(JSON.stringify(stripInternal(S.data)));
+    }
+
+    function pushHistory() {
+        const snap = snapshot();
+        // 与上一帧完全一样就不记
+        const cur = S.history[S.hIndex];
+        if (cur && JSON.stringify(cur) === JSON.stringify(snap)) {
+            updateHistoryUI();
+            return;
+        }
+        // 截断 redo 分支
+        S.history = S.history.slice(0, S.hIndex + 1);
+        S.history.push(snap);
+        if (S.history.length > S.hMax) S.history.shift();
+        S.hIndex = S.history.length - 1;
+        updateHistoryUI();
+    }
+
+    function undo() {
+        if (S.hIndex <= 0) return toast("没有可撤销的操作", "err");
+        S.hIndex--;
+        restoreHistory();
+        toast("已撤销");
+    }
+
+    function redo() {
+        if (S.hIndex >= S.history.length - 1) return toast("没有可重做的操作", "err");
+        S.hIndex++;
+        restoreHistory();
+        toast("已重做");
+    }
+
+    function restoreHistory() {
+        const snap = S.history[S.hIndex];
+        if (!snap) return;
+        // 保留当前的 __uid，让展开状态不丢
+        const uids = collectUids(S.data);
+        S.data = JSON.parse(JSON.stringify(snap));
+        applyUids(S.data, uids);
+        markDirty();
+        renderSide();
+        render();
+        updateHistoryUI();
+    }
+
+    function collectUids(data) {
+        const map = {};
+        ["links", "works", "notes", "milestones", "gallery"].forEach(k => {
+            (data[k] || []).forEach((it, i) => { if (it.__uid) map[k + ":" + i] = it.__uid; });
+        });
+        return map;
+    }
+
+    function applyUids(data, map) {
+        ["links", "works", "notes", "milestones", "gallery"].forEach(k => {
+            (data[k] || []).forEach((it, i) => {
+                const u = map[k + ":" + i];
+                if (u) it.__uid = u;
+            });
+        });
+    }
+
+    function updateHistoryUI() {
+        const u = $("#btnUndo"), r = $("#btnRedo");
+        if (u) u.disabled = S.hIndex <= 0;
+        if (r) r.disabled = S.hIndex >= S.history.length - 1;
+    }
 
     /* ---------- 工具 ---------- */
     function toast(msg, kind) {
@@ -43,6 +121,17 @@
         S.dirty = true;
         $("#fileState").textContent = "● 有未保存的修改";
         $("#fileState").style.color = "var(--yellow)";
+        // 自动记入历史（快照的是"改动后"的状态，撤销时回到上一个）
+        pushHistory();
+    }
+
+    /* 输入类改动用这个：连续输入合并成一步历史 */
+    function markDirtySoft() {
+        S.dirty = true;
+        $("#fileState").textContent = "● 有未保存的修改";
+        $("#fileState").style.color = "var(--yellow)";
+        clearTimeout(S._histTimer);
+        S._histTimer = setTimeout(pushHistory, 700);
     }
 
     function markClean(txt) {
@@ -135,7 +224,9 @@ window.SITE_DATA = `;
 
         // 顶层各板块前加一行说明，方便以后手改时知道每个字段干什么
         const SEC_COMMENT = {
+            layout: "页面布局（板块顺序 / 钉住 / 隐藏）",
             profile: "基本资料",
+            music: "音乐库（tracks 歌曲 / playlists 歌单 / recommend 外链推荐）",
             links: "常用链接",
             milestones: "成长里程碑（按时间倒序，最新的放最前）",
             works: "作品集（status: done 完成 / wip 进行中 / plan 规划中）",
@@ -335,6 +426,84 @@ window.SITE_DATA = `;
         return IMG_DIR + im.name;
     }
 
+    /* ---------- 排序：拖拽 + 上下移 ---------- */
+    function moveItem(kind, from, to) {
+        const arr = S.data[kind];
+        if (!arr || from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) return;
+        const [it] = arr.splice(from, 1);
+        arr.splice(to, 0, it);
+        markDirty();
+        render();
+        toast(`已移动到第 ${to + 1} 位`, "ok");
+    }
+
+    function bindSortEvents(main) {
+        // 上移 / 下移按钮
+        $$("[data-move]", main).forEach(b => b.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const item = b.closest(".item");
+            const kind = item.dataset.kind;
+            const i = Number(b.dataset.i);
+            const dir = b.dataset.move === "up" ? -1 : 1;
+            moveItem(kind, i, i + dir);
+        }));
+
+        // HTML5 拖拽排序
+        let dragIdx = -1;
+        const items = $$(".item", main);
+        items.forEach(el => {
+            el.addEventListener("dragstart", (e) => {
+                // 只有按住手柄才允许拖
+                if (!e.target.closest(".drag-handle") && !el.dataset.dragArmed) {
+                    e.preventDefault();
+                    return;
+                }
+                dragIdx = Number(el.dataset.i);
+                el.classList.add("dragging");
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", String(dragIdx));
+            });
+            el.addEventListener("dragend", () => {
+                el.classList.remove("dragging");
+                $$(".item", main).forEach(x => x.classList.remove("drop-before", "drop-after"));
+                dragIdx = -1;
+            });
+            el.addEventListener("dragover", (e) => {
+                if (dragIdx < 0) return;
+                e.preventDefault();
+                const r = el.getBoundingClientRect();
+                const after = e.clientY > r.top + r.height / 2;
+                $$(".item", main).forEach(x => x.classList.remove("drop-before", "drop-after"));
+                el.classList.add(after ? "drop-after" : "drop-before");
+            });
+            el.addEventListener("drop", (e) => {
+                if (dragIdx < 0) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const r = el.getBoundingClientRect();
+                const after = e.clientY > r.top + r.height / 2;
+                const kind = el.dataset.kind;
+                const to = Number(el.dataset.i) + (after ? 1 : 0);
+                const from = dragIdx;
+                dragIdx = -1;
+                if (from < to) to--;       // 移除源元素后目标位置要前移
+                if (from !== to) moveItem(kind, from, to);
+            });
+        });
+
+        // 手柄按下才激活拖拽（否则会和文本选择冲突）
+        $$(".drag-handle", main).forEach(h => {
+            h.addEventListener("mousedown", () => {
+                const el = h.closest(".item");
+                if (el) el.dataset.dragArmed = "1";
+            });
+            h.addEventListener("mouseup", () => {
+                const el = h.closest(".item");
+                if (el) delete el.dataset.dragArmed;
+            });
+        });
+    }
+
     /* ============================================================
        五、表单渲染
        ============================================================ */
@@ -375,6 +544,8 @@ window.SITE_DATA = `;
     function render() {
         const main = $("#main");
         if (S.section === "settings") return renderSettings(main);
+        if (S.section === "layout") return renderLayout(main);
+        if (S.section === "music") return renderMusic(main);
         if (S.section === "images") return renderImages(main);
         if (S.section === "publish") return renderPublish(main);
 
@@ -400,6 +571,7 @@ window.SITE_DATA = `;
         main.innerHTML = html;
 
         bindItemEvents(main);
+        bindSortEvents(main);
         const add = $("#btnAdd");
         if (add) add.addEventListener("click", () => addItem(S.section));
         const ea = $("#emptyAdd");
@@ -510,10 +682,13 @@ window.SITE_DATA = `;
                     <div class="tip">也可以直接填已有的图片路径</div></div>`;
         }
 
-        return `<div class="item${S.openItems[uidOf(kind, i)] ? "" : " collapsed"}" data-kind="${kind}" data-i="${i}">
+        return `<div class="item${S.openItems[uidOf(kind, i)] ? "" : " collapsed"}" data-kind="${kind}" data-i="${i}" draggable="true">
             <div class="item-head">
+                <span class="drag-handle" title="拖动排序">⠿</span>
                 <span class="chev">▾</span>
                 ${head}
+                <button class="icon-btn sm" data-move="up" data-i="${i}" title="上移">↑</button>
+                <button class="icon-btn sm" data-move="down" data-i="${i}" title="下移">↓</button>
                 <button class="icon-btn sm" data-del="${i}" title="删除">🗑</button>
             </div>
             <div class="item-body">${body}</div>
@@ -609,7 +784,7 @@ window.SITE_DATA = `;
                 const kind = item.dataset.kind;
                 const idx = Number(item.dataset.i);
                 S.data[kind][idx][el.dataset.k] = el.value;
-                markDirty();
+                markDirtySoft();
                 // 标题变化时同步列表头
                 if (el.dataset.k === "title" || el.dataset.k === "name") {
                     const t = el.closest(".item").querySelector(".item-title");
@@ -675,7 +850,7 @@ window.SITE_DATA = `;
             const kind = item.dataset.kind;
             const idx = Number(item.dataset.i);
             S.data[kind][idx].links[Number(el.dataset.li)][el.dataset.linkK] = el.value;
-            markDirty();
+            markDirtySoft();
         }));
         $$("[data-link-del]", main).forEach(b => b.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -698,7 +873,7 @@ window.SITE_DATA = `;
             render();
         }));
 
-        // 拖图区的点击选择（真正的拖放由全局路由统一处理）
+        // 拖拽区
         $$("[data-drop]", main).forEach(dz => {
             dz.addEventListener("click", () => pickFiles(dz.closest(".item"), dz.dataset.drop));
         });
@@ -921,8 +1096,120 @@ window.SITE_DATA = `;
 
         $$("[data-p]", main).forEach(el => el.addEventListener("input", () => {
             S.data.profile[el.dataset.p] = el.value;
-            markDirty();
+            markDirtySoft();
         }));
+    }
+
+    /* ============================================================
+       页面布局面板
+       —— 板块顺序 / 钉住 / 隐藏 / 标题
+       ============================================================ */
+    function renderLayout(main) {
+        const L = layoutConfig();
+        const sec = S.data.sections || (S.data.sections = {});
+        const SEC_IDS = ["home", "milestones", "works", "notes", "gallery", "links"];
+        const SEC_NAMES = {
+            home: "首页 Hero", milestones: "成长里程碑", works: "作品集",
+            notes: "日常记录", gallery: "照片墙", links: "常用链接",
+        };
+        if (!L.order.length) L.order = SEC_IDS.slice();
+        SEC_IDS.forEach(id => { if (!L.order.includes(id)) L.order.push(id); });
+
+        main.innerHTML = `<div class="sec-head">
+            <h2>🧩 页面布局</h2>
+            <p>调整板块顺序、钉住、隐藏与标题</p>
+            <div class="spacer"></div>
+            <button class="btn ghost sm" id="btnEnterLayout">◱ 在预览里拖动</button>
+        </div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">板块顺序与钉住</span>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:10px">
+                点右侧预览区上方的「🧩 布局」按钮，可以直接拖动板块调整位置。
+                这里也能用按钮精确调整。
+            </div>
+            <div id="layoutList"></div>
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">板块标题</span>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:10px">
+                改这里会更新页面上各板块的标题和副标题。
+            </div>
+            ${["links", "milestones", "works", "notes", "gallery"].map(id => `
+                <div class="field">
+                    <label>${SEC_NAMES[id]}</label>
+                    <div class="row">
+                        <input class="inp" data-sec-title="${id}" value="${esc((sec[id] || {}).title || "")}" placeholder="标题">
+                        <input class="inp" data-sec-sub="${id}" value="${esc((sec[id] || {}).sub || "")}" placeholder="副标题">
+                    </div>
+                </div>`).join("")}
+        </div></div>`;
+
+        // 板块顺序列表
+        $("#layoutList", main).innerHTML = L.order.map((id, i) => `
+            <div class="lay-row">
+                <span class="lay-idx">${i + 1}</span>
+                <span class="lay-name">${SEC_NAMES[id] || id}</span>
+                <div class="spacer"></div>
+                <button class="icon-btn sm" data-lay-pin="${id}" title="钉住"
+                    style="${L.pinned.includes(id) ? "color:var(--green);border-color:var(--green)" : ""}">📌</button>
+                <button class="icon-btn sm" data-lay-hide="${id}" title="隐藏"
+                    style="${L.hidden.includes(id) ? "color:var(--yellow);border-color:var(--yellow)" : ""}">👁</button>
+                <button class="icon-btn sm" data-lay-up="${id}" title="上移"${i === 0 ? " disabled" : ""}>↑</button>
+                <button class="icon-btn sm" data-lay-down="${id}" title="下移"${i === L.order.length - 1 ? " disabled" : ""}>↓</button>
+            </div>`).join("");
+
+        const afterChange = () => { markDirty(); render(); pushLayoutToFrame(); };
+
+        $$("[data-lay-pin]", main).forEach(b => b.addEventListener("click", () => {
+            const id = b.dataset.layPin;
+            const i = L.pinned.indexOf(id);
+            if (i >= 0) L.pinned.splice(i, 1); else L.pinned.push(id);
+            afterChange();
+        }));
+        $$("[data-lay-hide]", main).forEach(b => b.addEventListener("click", () => {
+            const id = b.dataset.layHide;
+            const i = L.hidden.indexOf(id);
+            if (i >= 0) L.hidden.splice(i, 1); else L.hidden.push(id);
+            afterChange();
+        }));
+        $$("[data-lay-up]", main).forEach(b => b.addEventListener("click", () => {
+            const id = b.dataset.layUp;
+            const i = L.order.indexOf(id);
+            if (i <= 0) return;
+            L.order.splice(i, 1);
+            L.order.splice(i - 1, 0, id);
+            afterChange();
+        }));
+        $$("[data-lay-down]", main).forEach(b => b.addEventListener("click", () => {
+            const id = b.dataset.layDown;
+            const i = L.order.indexOf(id);
+            if (i < 0 || i >= L.order.length - 1) return;
+            L.order.splice(i, 1);
+            L.order.splice(i + 1, 0, id);
+            afterChange();
+        }));
+
+        // 板块标题
+        $$("[data-sec-title]", main).forEach(el => el.addEventListener("input", () => {
+            const id = el.dataset.secTitle;
+            sec[id] = sec[id] || {};
+            sec[id].title = el.value;
+            markDirtySoft();
+            pushLayoutToFrame();
+        }));
+        $$("[data-sec-sub]", main).forEach(el => el.addEventListener("input", () => {
+            const id = el.dataset.secSub;
+            sec[id] = sec[id] || {};
+            sec[id].sub = el.value;
+            markDirtySoft();
+            pushLayoutToFrame();
+        }));
+
+        $("#btnEnterLayout", main)?.addEventListener("click", enterLayoutMode);
     }
 
     /* ============================================================
@@ -1230,6 +1517,486 @@ window.SITE_DATA = `;
         });
     }
     /* ============================================================
+       音乐库管理
+       —— 上传音乐 / 删除 / 歌单 / 外链推荐
+       ============================================================ */
+    function musicData() {
+        if (!S.data.music) {
+            S.data.music = { tracks: [], playlists: [], recommend: [] };
+        }
+        const m = S.data.music;
+        if (!m.tracks) m.tracks = [];
+        if (!m.playlists) m.playlists = [];
+        if (!m.recommend) m.recommend = [];
+        return m;
+    }
+
+    let musicSeq = 0;
+    function musicId(prefix) {
+        return prefix + "-" + Date.now().toString(36) + "-" + (++musicSeq);
+    }
+
+    function renderMusic(main) {
+        const m = musicData();
+
+        main.innerHTML = `<div class="sec-head">
+            <h2>🎵 音乐库</h2>
+            <p>${m.tracks.length} 首歌曲 · ${m.playlists.length} 个歌单 · ${m.recommend.length} 条推荐</p></div>
+
+        <!-- 歌曲 -->
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">歌曲</span>
+            <div class="spacer"></div>
+            <button class="btn ghost sm" id="btnAddTrack">＋ 添加</button>
+        </div><div class="item-body">
+            <div class="drop" id="dropAudio" style="margin-bottom:12px">
+                <div class="drop-icon">🎵</div>
+                <div class="drop-title">把音频文件拖进来，或点击选择</div>
+                <div class="drop-sub">支持 mp3 / wav / ogg / m4a，原样保存不压缩</div>
+            </div>
+            ${m.tracks.length ? m.tracks.map((t, i) => `
+                <div class="mus-row" data-id="${esc(t.id)}">
+                    <div class="mus-info">
+                        <div class="mus-title">${esc(t.title || "未命名")}</div>
+                        <div class="mus-meta">${esc(t.artist || "未知作者")} · ${esc(t.src)}</div>
+                    </div>
+                    <button class="icon-btn sm" data-music-play="${esc(t.id)}" title="试听">▶</button>
+                    <button class="icon-btn sm" data-music-edit="${i}" title="编辑">✎</button>
+                    <button class="icon-btn sm" data-music-del="${i}" title="删除">🗑</button>
+                </div>`).join("")
+            : `<div class="tip">还没有歌曲。拖个音频文件进来，或点「＋ 添加」手动填路径。</div>`}
+        </div></div>
+
+        <!-- 歌单 -->
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">歌单</span>
+            <div class="spacer"></div>
+            <button class="btn ghost sm" id="btnAddPlaylist">＋ 新建歌单</button>
+        </div><div class="item-body">
+            ${m.playlists.length ? m.playlists.map((pl, pi) => `
+                <div class="pl-row">
+                    <div class="pl-head">
+                        <span class="pl-name">${esc(pl.name)}</span>
+                        <span class="pl-count">${pl.tracks.length} 首</span>
+                        <div class="spacer"></div>
+                        <button class="icon-btn sm" data-pl-edit="${pi}" title="编辑">✎</button>
+                        <button class="icon-btn sm" data-pl-del="${pi}" title="删除">🗑</button>
+                    </div>
+                    ${pl.desc ? `<div class="pl-desc">${esc(pl.desc)}</div>` : ""}
+                    <div class="pl-tracks">
+                        ${pl.tracks.map((tid, ti) => {
+                            const t = m.tracks.find(x => x.id === tid);
+                            return `<span class="pl-track">
+                                ${esc(t ? t.title : "(已删除)")}
+                                <button data-pl-rm-track="${pi}:${ti}" title="移出歌单">✕</button>
+                            </span>`;
+                        }).join("")}
+                        <button class="pl-add-track" data-pl-add-track="${pi}" title="加歌">＋</button>
+                    </div>
+                </div>`).join("")
+            : `<div class="tip">还没有歌单。歌单决定播放器里「歌单」下拉的内容。</div>`}
+        </div></div>
+
+        <!-- 外链推荐 -->
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">外链推荐</span>
+            <div class="spacer"></div>
+            <button class="btn ghost sm" id="btnAddRec">＋ 添加</button>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:8px">
+                这些会显示在 music.html 的「听更多我推荐的音乐」页面，点击跳到外部平台。
+            </div>
+            ${m.recommend.length ? m.recommend.map((r, ri) => `
+                <div class="mus-row">
+                    <div class="mus-info">
+                        <div class="mus-title">${esc(r.title)}</div>
+                        <div class="mus-meta">${esc(r.platform || "")} · ${esc(r.url)}</div>
+                    </div>
+                    <button class="icon-btn sm" data-rec-edit="${ri}" title="编辑">✎</button>
+                    <button class="icon-btn sm" data-rec-del="${ri}" title="删除">🗑</button>
+                </div>`).join("")
+            : `<div class="tip">还没有推荐链接。</div>`}
+        </div></div>`;
+
+        bindMusicEvents(main);
+    }
+
+    function bindMusicEvents(main) {
+        const m = musicData();
+
+        // 拖音频 / 点击选择
+        const dz = $("#dropAudio", main);
+        if (dz) {
+            dz.addEventListener("click", () => pickAudioFiles());
+            dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("over"); });
+            dz.addEventListener("dragleave", () => dz.classList.remove("over"));
+            dz.addEventListener("drop", async (e) => {
+                e.preventDefault();
+                dz.classList.remove("over");
+                await handleAudioFiles(e.dataTransfer.files);
+            });
+        }
+
+        $("#btnAddTrack", main)?.addEventListener("click", () => {
+            m.tracks.push({
+                id: musicId("t"),
+                title: "新歌曲",
+                artist: "",
+                src: "music/",
+                cover: "",
+            });
+            markDirty();
+            render();
+        });
+
+        // 试听
+        $$("[data-music-play]", main).forEach(b => b.addEventListener("click", () => {
+            const t = m.tracks.find(x => x.id === b.dataset.musicPlay);
+            if (!t) return;
+            const a = new Audio(t.src);
+            a.play().then(() => {
+                toast(`播放中：${t.title}`);
+                setTimeout(() => a.pause(), 6000);
+            }).catch(() => toast("无法播放：" + t.src, "err"));
+        }));
+
+        // 编辑 / 删除歌曲
+        $$("[data-music-edit]", main).forEach(b => b.addEventListener("click", () => {
+            const i = Number(b.dataset.musicEdit);
+            const t = m.tracks[i];
+            showModal("编辑歌曲", `
+                <div class="field"><label>标题</label>
+                    <input class="inp" id="mtTitle" value="${esc(t.title)}"></div>
+                <div class="field"><label>作者</label>
+                    <input class="inp" id="mtArtist" value="${esc(t.artist)}"></div>
+                <div class="field"><label>音频路径</label>
+                    <input class="inp" id="mtSrc" value="${esc(t.src)}">
+                    <div class="tip">相对于网站根目录，例如 music/song.mp3</div></div>
+                <div class="field"><label>封面图路径（可选）</label>
+                    <input class="inp" id="mtCover" value="${esc(t.cover || "")}"></div>`,
+                [
+                    { label: "取消" },
+                    {
+                        label: "保存", primary: true, onClick: () => {
+                            t.title = $("#mtTitle").value.trim() || "未命名";
+                            t.artist = $("#mtArtist").value.trim();
+                            t.src = $("#mtSrc").value.trim();
+                            t.cover = $("#mtCover").value.trim();
+                            markDirty();
+                            render();
+                        }
+                    }
+                ]);
+        }));
+
+        $$("[data-music-del]", main).forEach(b => b.addEventListener("click", () => {
+            const i = Number(b.dataset.musicDel);
+            const t = m.tracks[i];
+            if (!confirm(`确定删除《${t.title}》？\n（music/ 目录里的音频文件不会自动删除，需要手动清理）`)) return;
+            m.tracks.splice(i, 1);
+            // 从歌单里摘掉
+            m.playlists.forEach(pl => {
+                pl.tracks = pl.tracks.filter(x => x !== t.id);
+            });
+            markDirty();
+            render();
+        }));
+
+        // 歌单
+        $("#btnAddPlaylist", main)?.addEventListener("click", () => {
+            m.playlists.push({ id: musicId("p"), name: "新歌单", desc: "", tracks: [] });
+            markDirty();
+            render();
+        });
+
+        $$("[data-pl-edit]", main).forEach(b => b.addEventListener("click", () => {
+            const pi = Number(b.dataset.plEdit);
+            const pl = m.playlists[pi];
+            showModal("编辑歌单", `
+                <div class="field"><label>名称</label>
+                    <input class="inp" id="plName" value="${esc(pl.name)}"></div>
+                <div class="field"><label>描述</label>
+                    <input class="inp" id="plDesc" value="${esc(pl.desc || "")}"></div>`,
+                [
+                    { label: "取消" },
+                    {
+                        label: "保存", primary: true, onClick: () => {
+                            pl.name = $("#plName").value.trim() || "未命名歌单";
+                            pl.desc = $("#plDesc").value.trim();
+                            markDirty();
+                            render();
+                        }
+                    }
+                ]);
+        }));
+
+        $$("[data-pl-del]", main).forEach(b => b.addEventListener("click", () => {
+            const pi = Number(b.dataset.plDel);
+            if (!confirm(`确定删除歌单「${m.playlists[pi].name}」？`)) return;
+            m.playlists.splice(pi, 1);
+            markDirty();
+            render();
+        }));
+
+        // 往歌单加歌
+        $$("[data-pl-add-track]", main).forEach(b => b.addEventListener("click", () => {
+            const pi = Number(b.dataset.plAddTrack);
+            const pl = m.playlists[pi];
+            const available = m.tracks.filter(t => !pl.tracks.includes(t.id));
+            if (!available.length) return toast("所有歌曲都已在歌单里了", "err");
+            showModal(`添加到「${pl.name}」`, `
+                <div class="pl-pick">
+                    ${available.map(t => `<label class="pl-pick-item">
+                        <input type="checkbox" value="${esc(t.id)}">
+                        <span>${esc(t.title)}</span>
+                        <span class="pl-pick-artist">${esc(t.artist || "")}</span>
+                    </label>`).join("")}
+                </div>`,
+                [
+                    { label: "取消" },
+                    {
+                        label: "加入", primary: true, onClick: () => {
+                            $$(".pl-pick input:checked", $("#modalBody")).forEach(cb => {
+                                pl.tracks.push(cb.value);
+                            });
+                            markDirty();
+                            render();
+                        }
+                    }
+                ]);
+        }));
+
+        // 从歌单移出
+        $$("[data-pl-rm-track]", main).forEach(b => b.addEventListener("click", () => {
+            const [pi, ti] = b.dataset.plRmTrack.split(":").map(Number);
+            m.playlists[pi].tracks.splice(ti, 1);
+            markDirty();
+            render();
+        }));
+
+        // 外链推荐
+        $("#btnAddRec", main)?.addEventListener("click", () => {
+            m.recommend.push({
+                id: musicId("r"), title: "新推荐",
+                desc: "", url: "https://", platform: "",
+            });
+            markDirty();
+            render();
+        });
+
+        $$("[data-rec-edit]", main).forEach(b => b.addEventListener("click", () => {
+            const ri = Number(b.dataset.recEdit);
+            const r = m.recommend[ri];
+            showModal("编辑推荐", `
+                <div class="field"><label>标题</label>
+                    <input class="inp" id="rcTitle" value="${esc(r.title)}"></div>
+                <div class="field"><label>描述</label>
+                    <input class="inp" id="rcDesc" value="${esc(r.desc || "")}"></div>
+                <div class="field"><label>链接</label>
+                    <input class="inp" id="rcUrl" value="${esc(r.url)}"></div>
+                <div class="field"><label>平台</label>
+                    <input class="inp" id="rcPlatform" value="${esc(r.platform || "")}"
+                        placeholder="网易云 / QQ音乐 / B站…"></div>`,
+                [
+                    { label: "取消" },
+                    {
+                        label: "保存", primary: true, onClick: () => {
+                            r.title = $("#rcTitle").value.trim() || "未命名";
+                            r.desc = $("#rcDesc").value.trim();
+                            r.url = $("#rcUrl").value.trim();
+                            r.platform = $("#rcPlatform").value.trim();
+                            markDirty();
+                            render();
+                        }
+                    }
+                ]);
+        }));
+
+        $$("[data-rec-del]", main).forEach(b => b.addEventListener("click", () => {
+            const ri = Number(b.dataset.recDel);
+            if (!confirm("确定删除这条推荐？")) return;
+            m.recommend.splice(ri, 1);
+            markDirty();
+            render();
+        }));
+    }
+
+    /* ---------- 音频文件导入 ---------- */
+    function pickAudioFiles() {
+        const inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = "audio/*";
+        inp.multiple = true;
+        inp.addEventListener("change", () => handleAudioFiles(inp.files));
+        inp.click();
+    }
+
+    async function handleAudioFiles(files) {
+        const list = Array.from(files).filter(f =>
+            f.type.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(f.name));
+        if (!list.length) return toast("没有识别到音频文件", "err");
+
+        const m = musicData();
+        for (const file of list) {
+            const ext = (file.name.match(/\.([a-z0-9]+)$/i) || [, "mp3"])[1].toLowerCase();
+            // 用时间戳避免重名
+            const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+            const base = file.name.replace(/\.[^.]+$/, "")
+                .replace(/[^\w\u4e00-\u9fa5-]+/g, "-").slice(0, 40) || "track";
+            const name = `${base}-${stamp}.${ext}`;
+
+            S.newAudio = S.newAudio || [];
+            S.newAudio.push({ name, blob: file });
+
+            // 从文件名猜标题和作者
+            const stem = file.name.replace(/\.[^.]+$/, "");
+            const parts = stem.split(/\s*[-–—]\s*/);
+            m.tracks.push({
+                id: musicId("t"),
+                title: parts[0] || stem,
+                artist: parts.length > 1 ? parts[1] : "",
+                src: "music/" + name,
+                cover: "",
+            });
+        }
+        markDirty();
+        render();
+        toast(`已加入 ${list.length} 首歌曲，记得点「保存到本地」`, "ok");
+    }
+
+    /* ============================================================
+       布局编辑：往预览 iframe 注入脚本，拖动板块改顺序
+       ============================================================ */
+    let layoutMode = false;
+
+    function layoutConfig() {
+        const L = S.data.layout || (S.data.layout = { order: [], pinned: [], hidden: [] });
+        if (!L.order) L.order = [];
+        if (!L.pinned) L.pinned = [];
+        if (!L.hidden) L.hidden = [];
+        return L;
+    }
+
+    function enterLayoutMode() {
+        const frame = $("#previewFrame");
+        if (!frame) return;
+        layoutMode = true;
+        $("#btnLayout").classList.add("active");
+        // 布局模式需要更大的预览区才好拖
+        $("#previewPane")?.classList.add("wide");
+        $("#previewPane")?.classList.remove("collapsed");
+
+        const inject = () => {
+            try {
+                const w = frame.contentWindow;
+                if (!w) return;
+                // 注入脚本源码
+                fetch("js/layout-editor.js").then(r => r.text()).then(code => {
+                    try {
+                        w.eval(code);
+                        w.__layoutEditor.init(layoutConfig());
+                    } catch (e) {
+                        toast("注入失败：" + e.message, "err");
+                    }
+                });
+            } catch (e) {
+                toast("无法操作预览：" + e.message, "err");
+            }
+        };
+
+        // iframe 可能还没加载完
+        if (frame.contentDocument && frame.contentDocument.readyState === "complete") {
+            inject();
+        } else {
+            frame.addEventListener("load", inject, { once: true });
+            frame.src = "index.html?t=" + Date.now();
+        }
+
+        // 接收 iframe 的消息
+        window.addEventListener("message", onLayoutMessage);
+        toast("布局模式：在右侧预览里拖动板块手柄排序，📌 钉住，👁 隐藏", "ok");
+    }
+
+    function exitLayoutMode() {
+        layoutMode = false;
+        $("#btnLayout")?.classList.remove("active");
+        $("#previewPane")?.classList.remove("wide");
+        try {
+            // 退出前把编辑器里的最终配置推给预览
+            pushLayoutToFrame();
+            $("#previewFrame").contentWindow.__layoutEditor?.cleanup();
+        } catch (e) { /* ignore */ }
+        window.removeEventListener("message", onLayoutMessage);
+        refreshPreview();
+    }
+
+    function onLayoutMessage(e) {
+        const d = e.data;
+        if (!d || !d.__layoutEditor) return;
+        // 只处理布局编辑器的消息（不严格校验 source，避免 iframe 重载后失效）
+        if (d.type === "change") {
+            const L = layoutConfig();
+            L.order = d.order;
+            L.pinned = d.pinned;
+            L.hidden = d.hidden;
+            markDirtySoft();
+        }
+    }
+
+    /* 把最新布局配置应用到预览（不依赖布局编辑模式） */
+    function pushLayoutToFrame() {
+        const frame = $("#previewFrame");
+        if (!frame) return;
+        const w = frame.contentWindow;
+        if (!w) return;
+        const L = layoutConfig();
+
+        // 已在布局模式：让注入脚本自己应用
+        if (w.__layoutEditor) {
+            try {
+                w.postMessage({
+                    __layoutEditor: true, type: "config",
+                    order: L.order, pinned: L.pinned, hidden: L.hidden,
+                }, "*");
+                return;
+            } catch (e) { /* 落到下面的直接操作 */ }
+        }
+
+        // 未在布局模式：直接操作预览里的 DOM
+        try {
+            const d = w.document;
+            const main = d.querySelector("main") || d.body;
+            L.order.forEach(id => {
+                const el = d.getElementById(id);
+                if (el) main.appendChild(el);
+            });
+            ["links", "milestones", "works", "notes", "gallery", "home"].forEach(id => {
+                const el = d.getElementById(id);
+                if (!el) return;
+                el.style.display = L.hidden.includes(id) ? "none" : "";
+                const on = L.pinned.includes(id);
+                el.classList.toggle("pinned", on);
+            });
+            // 板块标题
+            const sec = S.data.sections || {};
+            Object.keys(sec).forEach(id => {
+                const el = d.getElementById(id);
+                if (!el) return;
+                const h2 = el.querySelector(".section-head h2");
+                const p = el.querySelector(".section-head p");
+                if (h2 && sec[id].title) h2.textContent = sec[id].title;
+                if (p && sec[id].sub) p.textContent = sec[id].sub;
+            });
+            // 导航栏隐藏项
+            const links = d.querySelectorAll("#navLinks a");
+            links.forEach(a => {
+                const id = a.getAttribute("href").slice(1);
+                a.style.display = L.hidden.includes(id) ? "none" : "";
+            });
+        } catch (e) { /* ignore */ }
+    }
+
+    /* ============================================================
        通用弹窗
        ============================================================ */
     function showModal(title, bodyHtml, buttons) {
@@ -1328,14 +2095,22 @@ window.SITE_DATA = `;
             for (const im of S.newImages) {
                 await writeFile(S.dirHandle, IMG_DIR + im.name, im.blob);
             }
-            // 2. data.js
+            // 2. 音频
+            const audios = S.newAudio || [];
+            for (const au of audios) {
+                await writeFile(S.dirHandle, "music/" + au.name, au.blob);
+            }
+            // 3. data.js
             await writeFile(S.dirHandle, DATA_FILE, new Blob([serialize()], { type: "text/javascript" }));
-            // 3. README 里的图片命名说明不用改
 
-            const n = S.newImages.length;
+            const n = S.newImages.length, na = audios.length;
             S.newImages = [];
-            markClean("已保存到本地" + (n ? `（${n} 张新图）` : ""));
-            toast(n ? `已保存：data.js + ${n} 张图片` : "已保存 data.js", "ok");
+            S.newAudio = [];
+            const parts = ["data.js"];
+            if (n) parts.push(n + " 张图片");
+            if (na) parts.push(na + " 个音频");
+            markClean("已保存到本地");
+            toast("已保存：" + parts.join(" + "), "ok");
             refreshPreview();
         } catch (e) {
             toast("保存失败：" + e.message, "err");
@@ -1380,10 +2155,13 @@ window.SITE_DATA = `;
         };
 
         try {
-            // 0. 若已授权过目录，顺手把新图也写进本地仓库，保持两边一致
-            if (S.dirHandle && S.newImages.length) {
+            // 0. 若已授权过目录，顺手把新图/新音频也写进本地仓库，保持两边一致
+            if (S.dirHandle) {
                 for (const im of S.newImages) {
                     await writeFile(S.dirHandle, IMG_DIR + im.name, im.blob);
+                }
+                for (const au of (S.newAudio || [])) {
+                    await writeFile(S.dirHandle, "music/" + au.name, au.blob);
                 }
             }
 
@@ -1416,17 +2194,30 @@ window.SITE_DATA = `;
                 });
             }
 
+            // 3b. 建 blob：新增的音频
+            const audios = S.newAudio || [];
+            for (const au of audios) {
+                const b64 = await blobToBase64(au.blob);
+                const auBlob = await createBlob(H, owner, repo, b64, "base64");
+                treeItems.push({
+                    path: "music/" + au.name,
+                    mode: "100644", type: "blob", sha: auBlob.sha,
+                });
+            }
+
             const tree = await createTree(H, owner, repo, baseTree, treeItems);
 
             // 4. 提交
-            const nImg = S.newImages.length;
-            const msg = nImg
-                ? `更新网站内容（${nImg} 张新图）`
-                : "更新网站内容";
+            const nImg = S.newImages.length, nAu = audios.length;
+            const msgParts = [];
+            if (nImg) msgParts.push(nImg + " 张新图");
+            if (nAu) msgParts.push(nAu + " 个音频");
+            const msg = msgParts.length ? `更新网站内容（${msgParts.join("、")}）` : "更新网站内容";
             const commit = await createCommit(H, owner, repo, tree.sha, baseCommit, msg);
             await updateRef(H, owner, repo, branch, commit.sha);
 
             S.newImages = [];
+            S.newAudio = [];
             markClean("已推送到 GitHub");
             toast("发布成功！约 1 分钟后线上更新", "ok");
         } catch (e) {
@@ -1496,6 +2287,20 @@ window.SITE_DATA = `;
     function refreshPreview() {
         const f = $("#previewFrame");
         f.src = "index.html?t=" + Date.now();
+        // 加载完把内存里的最新数据注进去，让预览始终反映当前编辑状态
+        f.addEventListener("load", onPreviewLoaded, { once: true });
+    }
+
+    /* 预览加载完成 → 注入当前数据 */
+    function onPreviewLoaded() {
+        const frame = $("#previewFrame");
+        const w = frame.contentWindow;
+        if (!w) return;
+        try {
+            w.SITE_DATA = JSON.parse(JSON.stringify(stripInternal(S.data)));
+            if (typeof w.__rerender === "function") w.__rerender();
+        } catch (e) { /* ignore */ }
+        pushLayoutToFrame();
     }
 
     /* ============================================================
@@ -1537,6 +2342,7 @@ window.SITE_DATA = `;
             return;
         }
         markClean("已同步");
+        pushHistory();          // 基准快照，撤销到这里就是原始状态
         renderSide();
         render();
         refreshPreview();
@@ -1545,6 +2351,49 @@ window.SITE_DATA = `;
         $("#btnPublish").addEventListener("click", publish);
         $("#btnRefresh").addEventListener("click", refreshPreview);
         $("#btnPreview").addEventListener("click", () => window.open("index.html", "_blank"));
+        $("#btnUndo")?.addEventListener("click", undo);
+        $("#btnRedo")?.addEventListener("click", redo);
+        $("#btnLayout")?.addEventListener("click", () => {
+            if (layoutMode) exitLayoutMode();
+            else enterLayoutMode();
+        });
+
+        // 快捷键
+        document.addEventListener("keydown", (e) => {
+            const tag = (e.target.tagName || "").toLowerCase();
+            const inInput = tag === "input" || tag === "textarea";
+            const mod = e.ctrlKey || e.metaKey;
+
+            // Ctrl+Z 撤销 / Ctrl+Shift+Z 或 Ctrl+Y 重做
+            if (mod && e.key.toLowerCase() === "z") {
+                e.preventDefault();
+                if (e.shiftKey) redo(); else undo();
+                return;
+            }
+            if (mod && e.key.toLowerCase() === "y") {
+                e.preventDefault();
+                redo();
+                return;
+            }
+            // Ctrl+S 保存
+            if (mod && e.key.toLowerCase() === "s") {
+                e.preventDefault();
+                saveLocal();
+                return;
+            }
+            // 输入框里不拦截其他快捷键
+            if (inInput) return;
+            // 数字键切板块
+            if (/^[1-6]$/.test(e.key)) {
+                const secs = SECTIONS;
+                const i = Number(e.key) - 1;
+                if (secs[i]) {
+                    S.section = secs[i].id;
+                    renderSide();
+                    render();
+                }
+            }
+        });
 
         // 弹窗关闭
         $("#modalClose")?.addEventListener("click", () => $("#modal").classList.remove("show"));

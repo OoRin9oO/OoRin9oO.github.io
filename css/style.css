@@ -723,13 +723,255 @@ html[data-theme="light"] .tag { color: var(--accent-2); }
 
 .reveal.in { opacity: 1; transform: none; }
 
-/* ---------- 14. 响应式 ---------- */
+/* ---------- 15. 钉住的板块 ---------- */
+.section.pinned {
+    position: sticky;
+    top: 64px;
+    z-index: 30;
+    background: var(--bg-2);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+    border-radius: var(--radius);
+    padding-left: 18px;
+    padding-right: 18px;
+    border: 1px solid var(--border);
+}
+
+.section.pinned::before {
+    content: "📌";
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 0.8rem;
+    opacity: 0.5;
+}
+
+/* ---------- 16. 音乐聚合器 ---------- */
+.music-backdrop {
+    position: fixed; inset: 0; z-index: 190;
+    background: rgba(8, 6, 16, 0.6);
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s var(--ease);
+}
+.music-backdrop.show { opacity: 1; pointer-events: auto; }
+
+.music-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: min(360px, 92vw);
+    z-index: 200;
+    background: var(--bg-2);
+    border-left: 1px solid var(--border);
+    box-shadow: -18px 0 50px rgba(0, 0, 0, 0.4);
+    transform: translateX(100%);
+    transition: transform 0.32s var(--ease);
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+    overflow-y: auto;
+}
+.music-panel.open { transform: translateX(0); }
+
+.music-head {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 16px;
+}
+.music-head > div { flex: 1; min-width: 0; }
+.music-title {
+    font-weight: 700; font-size: 1rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.music-artist { font-size: 0.78rem; color: var(--dim); margin-top: 2px; }
+
+.music-progress {
+    display: flex; align-items: center; gap: 9px;
+    margin-bottom: 14px;
+    font-size: 0.72rem; color: var(--dim);
+    font-variant-numeric: tabular-nums;
+}
+.music-progress input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+
+.music-controls {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 20px; flex-wrap: wrap;
+}
+
+.music-section { margin-bottom: 18px; }
+.music-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 9px;
+    font-size: 0.8rem; font-weight: 700; color: var(--dim);
+}
+.music-section-head .sel { padding: 5px 9px; font-size: 0.78rem; }
+
+.music-list { display: flex; flex-direction: column; gap: 3px; }
+
+.music-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 9px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.18s;
+}
+.music-item:hover { background: rgba(167, 139, 250, 0.12); }
+.music-item.playing { background: rgba(167, 139, 250, 0.18); }
+.music-item.playing .mi-title { color: var(--accent); }
+
+.mi-idx { width: 12px; font-size: 0.7rem; color: var(--accent); text-align: center; flex: none; }
+.mi-cover {
+    width: 34px; height: 34px; flex: none;
+    border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent-soft), transparent);
+    background-size: cover; background-position: center;
+    border: 1px solid var(--border);
+}
+.mi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mi-title {
+    font-size: 0.82rem; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mi-artist { font-size: 0.72rem; color: var(--faint); }
+.mi-dur { font-size: 0.7rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.music-empty {
+    padding: 18px; text-align: center;
+    color: var(--faint); font-size: 0.82rem;
+    border: 1px dashed var(--border); border-radius: var(--radius-sm);
+}
+
+.music-more {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto; padding: 12px 15px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(120deg, rgba(167, 139, 250, 0.16), rgba(124, 92, 240, 0.1));
+    border: 1px solid var(--border);
+    color: var(--text); text-decoration: none;
+    font-size: 0.85rem; font-weight: 600;
+    transition: all 0.22s var(--ease);
+}
+.music-more:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(124, 92, 240, 0.22);
+}
+
+/* ---------- 17. 音乐推荐页 ---------- */
+body.music-page { background-attachment: fixed; }
+
+.page-top {
+    height: 58px;
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 clamp(16px, 5vw, 40px);
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+}
+.back-link {
+    color: var(--dim); text-decoration: none;
+    font-size: 0.85rem; font-weight: 600;
+    transition: color 0.2s;
+}
+.back-link:hover { color: var(--accent); }
+.page-top-right { margin-left: auto; }
+
+.music-page-main {
+    padding-top: 40px;
+    padding-bottom: 70px;
+    max-width: 1080px;   /* 音乐页比正文宽一些，网格排布更好看 */
+}
+
+.page-hero { text-align: center; margin-bottom: 46px; }
+.page-hero-icon { font-size: 3rem; margin-bottom: 12px; }
+.page-hero h1 { font-size: clamp(1.4rem, 4vw, 2rem); margin-bottom: 8px; }
+.page-hero p { color: var(--dim); font-size: 0.9rem; }
+
+.track-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.track-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.26s var(--ease);
+}
+.track-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+}
+.tc-cover {
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, var(--accent-soft), transparent);
+    background-size: cover; background-position: center;
+    display: grid; place-items: center;
+    position: relative;
+}
+.tc-play {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff; display: grid; place-items: center;
+    font-size: 0.9rem;
+    opacity: 0; transform: scale(0.85);
+    transition: all 0.25s var(--ease);
+}
+.track-card:hover .tc-play { opacity: 1; transform: scale(1); }
+.tc-info { padding: 11px 13px 13px; }
+.tc-title {
+    font-size: 0.88rem; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tc-artist { font-size: 0.76rem; color: var(--faint); margin-top: 2px; }
+
+.rec-list { display: flex; flex-direction: column; gap: 10px; }
+.rec-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 15px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none; color: var(--text);
+    transition: all 0.24s var(--ease);
+}
+.rec-card:hover {
+    border-color: var(--accent);
+    transform: translateX(4px);
+    background: var(--card-hover);
+}
+.rc-icon {
+    width: 42px; height: 42px; flex: none;
+    display: grid; place-items: center;
+    border-radius: 11px; font-size: 1.15rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+}
+.rc-info { flex: 1; min-width: 0; }
+.rc-title { font-weight: 600; font-size: 0.92rem; }
+.rc-desc { font-size: 0.8rem; color: var(--dim); margin-top: 2px; }
+.rc-platform {
+    display: inline-block; margin-top: 6px;
+    font-size: 0.7rem; padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(167, 139, 250, 0.14);
+    color: var(--accent);
+}
+.rc-arrow { font-size: 1.1rem; color: var(--faint); flex: none; }
+
 @media (max-width: 720px) {
     .hero { grid-template-columns: 1fr; text-align: center; justify-items: center; }
-    .hero-actions { justify-content: center; }
+    .hero-actions { justify-items: center; }
     .avatar { width: 140px; height: 140px; }
     .hero-body h1 { font-size: 1.7rem; }
     .card { padding: 20px; }
+    .music-panel { width: 100vw; }
+    .track-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
 
 @media (max-width: 620px) {

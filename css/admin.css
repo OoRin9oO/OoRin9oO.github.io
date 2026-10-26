@@ -178,6 +178,27 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 .chev { color: var(--faint); transition: transform 0.2s; font-size: 0.8rem; }
 .item.collapsed .chev { transform: rotate(-90deg); }
 
+/* 排序相关 */
+.drag-handle {
+    cursor: grab;
+    color: var(--faint);
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 0 2px;
+    user-select: none;
+    flex: none;
+}
+.drag-handle:active { cursor: grabbing; }
+.drag-handle:hover { color: var(--accent); }
+
+.item.dragging {
+    opacity: 0.45;
+    border-style: dashed;
+}
+
+.item.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+.item.drop-after { box-shadow: 0 3px 0 var(--accent); }
+
 /* 表单 */
 .field { margin-bottom: 13px; }
 .field > label {
@@ -268,12 +289,13 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 
 /* ---------- 预览栏 ---------- */
 .preview {
-    width: 400px; flex: none;
+    width: 480px; flex: none;
     background: var(--bg-2);
     border-left: 1px solid var(--border);
     display: flex; flex-direction: column;
     transition: width 0.25s var(--ease);
 }
+.preview.wide { width: min(920px, 58vw); }
 .preview.collapsed { width: 36px; }
 .preview.collapsed .preview-head span { display: none; }
 .preview.collapsed iframe { display: none; }
@@ -389,6 +411,97 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
 .toast.err { border-color: var(--red); }
 .toast.ok { border-color: var(--green); }
+
+/* ---------- 音乐库管理 ---------- */
+.mus-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    margin-bottom: 6px;
+}
+.mus-info { flex: 1; min-width: 0; }
+.mus-title { font-size: 0.85rem; font-weight: 600; }
+.mus-meta {
+    font-size: 0.72rem; color: var(--faint);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.pl-row {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: var(--bg);
+}
+.pl-head { display: flex; align-items: center; gap: 8px; }
+.pl-head .spacer { flex: 1; }
+.pl-name { font-weight: 600; font-size: 0.87rem; }
+.pl-count { font-size: 0.72rem; color: var(--faint); }
+.pl-desc { font-size: 0.76rem; color: var(--dim); margin: 3px 0 7px; }
+
+.pl-tracks { display: flex; flex-wrap: wrap; gap: 5px; }
+.pl-track {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 999px;
+    background: rgba(167, 139, 250, 0.14);
+    color: var(--accent); font-size: 0.75rem;
+}
+.pl-track button {
+    border: none; background: none; color: inherit;
+    cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0;
+    opacity: 0.6;
+}
+.pl-track button:hover { opacity: 1; color: var(--red); }
+.pl-add-track {
+    border: 1px dashed var(--border); background: transparent;
+    color: var(--faint); border-radius: 999px;
+    padding: 2px 9px; font-size: 0.75rem; cursor: pointer;
+}
+.pl-add-track:hover { border-color: var(--accent); color: var(--accent); }
+
+.pl-pick { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
+.pl-pick-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 10px; border-radius: 8px; cursor: pointer;
+    border: 1px solid transparent;
+}
+.pl-pick-item:hover { background: rgba(167, 139, 250, 0.1); }
+.pl-pick-item input { accent-color: var(--accent); }
+.pl-pick-artist { margin-left: auto; font-size: 0.74rem; color: var(--faint); }
+
+/* ---------- 页面布局列表 ---------- */
+.lay-row {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    margin-bottom: 5px;
+}
+.lay-idx {
+    width: 20px; height: 20px; flex: none;
+    display: grid; place-items: center;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.72rem; font-weight: 700;
+}
+.lay-name { font-size: 0.85rem; font-weight: 600; }
+.lay-row .spacer { flex: 1; }
+
+/* ---------- 顶栏分隔 ---------- */
+.top-sep {
+    width: 1px; height: 20px;
+    background: var(--border);
+    margin: 0 3px;
+}
+.icon-btn.active {
+    border-color: var(--accent);
+    background: rgba(167, 139, 250, 0.18);
+    color: var(--accent);
+}
 
 @media (max-width: 1100px) {
     .preview { display: none; }
