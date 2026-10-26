@@ -203,6 +203,10 @@ window.SITE_DATA = {
     ]  /* 日常记录（images 配图可点击放大） */,
     gallery: [
         {
+            src: "img/s-20261026-s.webp",
+            caption: "我……我也要比心吗"
+        },
+        {
             src: "img/r-20261026-r.webp",
             caption: "suki……"
         },
