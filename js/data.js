@@ -15,7 +15,7 @@
 
 window.SITE_DATA = {
     layout: {
-        order: ["home", "milestones", "works", "notes", "gallery", "links"],
+        order: ["home", "links", "milestones", "works", "notes", "gallery"],
         pinned: [],
         hidden: []
     }  /* 页面布局（板块顺序 / 钉住 / 隐藏） */,
@@ -81,7 +81,7 @@ window.SITE_DATA = {
         title: "日常记录 · 未来作品集",
         tagline: "写代码、看黄昏、收集碎碎念",
         intro: "这里存放我的日常片段与在做的作品。左手记录生活，右手慢慢造东西 —— 作品大多从小项目开始，长出来的过程比结果更有意思。",
-        avatar: "img/profile.jpg",
+        avatar: "img/profile.webp",
         bgm: "music/bgm.wav",
         location: "中国",
         email: "1738177703@qq.com"
@@ -202,6 +202,10 @@ window.SITE_DATA = {
         }
     ]  /* 日常记录（images 配图可点击放大） */,
     gallery: [
+        {
+            src: "img/r-20261026-r.webp",
+            caption: "suki……"
+        },
         {
             src: "img/a-20261025-a.webp",
             caption: "章鱼与猫耳少女"
