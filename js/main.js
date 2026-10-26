@@ -200,6 +200,9 @@
             a.src = p.avatar;
             a.alt = p.name + " 的头像";
         }
+        // favicon 跟着头像走，删掉旧文件也不会 404
+        const fav = $("#faviconLink");
+        if (fav && p.avatar) fav.href = p.avatar;
         if (audio && p.bgm) {
             const src = $("#bgmSource");
             if (src) src.src = p.bgm;

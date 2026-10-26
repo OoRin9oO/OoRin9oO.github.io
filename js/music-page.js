@@ -68,6 +68,11 @@
         renderTracks();
         renderRecommend();
 
+        // favicon 跟着 profile.avatar 走
+        const D = window.SITE_DATA || {};
+        const fav = $("#faviconLink");
+        if (fav && D.profile && D.profile.avatar) fav.href = D.profile.avatar;
+
         const yr = $("#year");
         if (yr) yr.textContent = new Date().getFullYear();
 
