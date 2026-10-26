@@ -128,17 +128,38 @@
 - **💾 保存到本地** —— 写回你硬盘上的 `js/data.js` 和 `img/` 图片。
   第一次点会让你选一次文件夹（选网站根目录 `OoRin9oO.github.io`），之后浏览器记住。
   需要用 **Edge 或 Chrome**（Firefox 不支持直接写文件）。
-- **🚀 保存并发布** —— 直接提交到 GitHub 并推送，线上自动更新，不用开终端敲 git。
+- **🚀 保存并发布** —— 提交并推送到 GitHub，线上自动更新，不用开终端敲 git。
 
-### 首次使用「保存并发布」要先填令牌
+### 「保存并发布」不需要 Token
 
-侧栏「🚀 发布设置」→ 填 Personal Access Token：
+**直接点就行，不用配置任何 Token。**
+
+原理：编辑器把改好的内容 POST 给本地服务（`tools/serve.py`），
+由本地服务执行 `git add` / `git commit` / `git push`。
+用的是你**本机 git 已经登录好的凭据**（Windows 的 Git Credential Manager），
+所以不用手动创建 Personal Access Token。
+
+发布设置页会显示当前状态：
+
+- 🟢 **本地 git 可用** —— 直接点「保存并发布」就行
+- 🟡 **本地发布服务未启动** —— 说明页面不是通过 `start-editor.bat` 打开的，
+  关掉页面双击 `start-editor.bat` 重新打开即可
+
+如果你用的是别的静态服务器（非 `tools/serve.py`），发布设置页里还有一条
+**GitHub API 备用通道**，需要填 Token（勾选 `Contents → Read and write`，
+classic token 则是 `repo`；只勾 read 会报 **403 权限不足**）。
+
+### 备用通道：GitHub API + Token
+
+只有在本地发布服务不可用时才需要。侧栏「🚀 发布设置」→「GitHub API 备用通道」：
 
 1. GitHub → 右上角头像 → Settings
 2. 左侧最下面 → Developer settings
 3. Personal access tokens → Tokens (classic) → Generate new token
-4. 勾选 `repo`（公开仓库勾 `public_repo` 就够），设个有效期
-5. 复制那串 `github_pat_...` 粘进去，点「🔌 测试连接」验证
+4. **勾选 `repo`**（公开仓库勾 `public_repo` 就够），设个有效期
+5. 复制那串 `github_pat_...` 粘进去，点「🔌 测试 Token」验证
+
+⚠️ 只勾 `read` 会报 **HTTP 403 权限不足**——写操作必须要写权限。
 
 令牌只存在你本机浏览器的 localStorage，不会传到任何第三方。
 

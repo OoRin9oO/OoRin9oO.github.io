@@ -2088,8 +2088,11 @@ window.SITE_DATA = `;
             } catch (e) {
                 box.innerHTML = `<div class="pub-badge warn">⚠️ 本地发布服务未启动</div>
                     <div class="tip" style="margin-top:8px">
-                        请用 <code>start-editor.bat</code> 启动（而不是直接双击 admin.html），<br>
-                        或者改用下面的 GitHub API 备用通道。
+                        「保存并发布」需要由 <code>tools/serve.py</code> 提供的发布接口。<br><br>
+                        <b>解决办法一（推荐）</b>：关掉当前页面，双击项目根目录的
+                        <code>start-editor.bat</code> 重新打开。<br><br>
+                        <b>解决办法二</b>：用下面的 GitHub API 备用通道（需要配置 Token）。<br><br>
+                        <b>解决办法三</b>：点「💾 保存到本地」，然后告诉我一声，我帮你 commit + push。
                     </div>`;
             }
         };
@@ -2367,7 +2370,7 @@ window.SITE_DATA = `;
         toast("正在发布…", "ok");
 
         // 优先用本地 git（不需要 Token）
-        let localOk = false;
+        let localErr = null;
         try {
             const r = await publishViaLocalGit();
             if (r.ok) {
@@ -2375,25 +2378,29 @@ window.SITE_DATA = `;
                 S.newAudio = [];
                 markClean("已推送到 GitHub");
                 toast(r.message || "发布成功！约 1 分钟后线上更新", "ok");
-                localOk = true;
-            } else {
-                // 本地服务在，但 git 出错了
-                showPublishError(r);
                 return;
             }
+            // 本地服务在，但 git 出错了
+            showPublishError(r);
+            return;
         } catch (e) {
-            // 本地服务不可用（可能是用别的方式打开的页面）
+            // 本地服务不可用
+            localErr = e;
             console.warn("本地发布不可用：", e.message);
         }
 
-        if (localOk) return;
-
         // 回退到 GitHub API
         if (!S.token) {
+            showPublishError({
+                error: "本地发布服务不可用，且没有配置 Token。",
+                hint: "最省事的办法：关掉这个页面，双击项目根目录的 start-editor.bat 重新打开，\n" +
+                      "然后直接点「保存并发布」——它会用你本机 git 已登录的凭据推送，不需要任何 Token。\n\n" +
+                      "如果暂时不方便重启，也可以点「💾 保存到本地」，然后告诉我一声，我帮你 commit + push。",
+            });
             S.section = "publish";
             renderSide();
             render();
-            return toast("本地 git 不可用，且未配置 Token。请看「发布设置」", "err");
+            return;
         }
 
         try {
@@ -2403,7 +2410,11 @@ window.SITE_DATA = `;
             markClean("已推送到 GitHub");
             toast("发布成功！约 1 分钟后线上更新", "ok");
         } catch (e) {
-            showPublishError({ error: e.message });
+            showPublishError({
+                error: e.message,
+                hint: "如果报 403 权限不足，说明 Token 没有写权限。\n" +
+                      "但更推荐用本地 git：关掉页面双击 start-editor.bat 重新打开就行，不需要 Token。",
+            });
         }
     }
 

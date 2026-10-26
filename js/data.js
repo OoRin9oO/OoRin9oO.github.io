@@ -118,7 +118,7 @@ window.SITE_DATA = {
     ]  /* 成长里程碑（按时间倒序，最新的放最前） */,
     works: [
         {
-            title: "爱依计划（发布测试）",
+            title: "爱依计划",
             desc: "纯静态的个人主页，记录日常与作品。GitHub Pages 托管，没有后端，加内容只改一个数据文件。",
             status: "wip",
             cover: "img/a-20261025-a.webp",
