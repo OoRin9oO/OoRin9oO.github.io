@@ -1,38 +1,46 @@
 /* ============================================================
    站点内容数据 —— 由 Rin9 网站编辑器生成
    也可以手改；改完记得保持下面的结构完整
+
+   板块说明：
+     profile    基本资料（名字、简介、头像、背景音乐、邮箱）
+     links      常用链接
+     milestones 成长里程碑（按时间倒序，最新的放最前）
+     works      作品集（status: done 完成 / wip 进行中 / plan 规划中）
+     notes      日常记录（images 配图可点击放大）
+     gallery    照片墙（按原始比例完整显示，不裁剪）
+
+   图片命名规范：字母-日期-字母（如 a-20261025-a.webp）
    ============================================================ */
 
 window.SITE_DATA = {
-
-    /* ---------- 页面布局 ----------
-       控制各板块在页面上的顺序与状态，编辑器里可直接拖动调整
-       order    板块显示顺序（数组里没有的板块会排到最后）
-       pinned   钉住的板块，滚动时固定在视口顶部
-       hidden   暂时隐藏的板块（存板块 id）
-    */
     layout: {
         order: ["home", "milestones", "works", "notes", "gallery", "links"],
         pinned: [],
         hidden: []
-    },
-
-    /* ---------- 板块标题 ----------
-       每个板块的标题与副标题，编辑器里可改
-    */
+    }  /* 页面布局（板块顺序 / 钉住 / 隐藏） */,
     sections: {
-        links: { title: "✨ 常用链接", sub: "常去的地方，点一下就过去" },
-        milestones: { title: "🏔️ 成长里程碑", sub: "那些回想起来会感慨的时刻" },
-        works: { title: "🧩 作品集", sub: "在做的和做完的东西，慢慢添" },
-        notes: { title: "📔 日常记录", sub: "一些碎碎念，按时间往下翻" },
-        gallery: { title: "🖼️ 照片墙", sub: "点开看大图" }
+        links: {
+            title: "✨ 常用链接",
+            sub: "常去的地方，点一下就过去"
+        },
+        milestones: {
+            title: "🏔️ 成长里程碑",
+            sub: "那些回想起来会感慨的时刻"
+        },
+        works: {
+            title: "🧩 作品集",
+            sub: "在做的和做完的东西，慢慢添"
+        },
+        notes: {
+            title: "📔 日常记录",
+            sub: "一些碎碎念，按时间往下翻"
+        },
+        gallery: {
+            title: "🖼️ 照片墙",
+            sub: "点开看大图"
+        }
     },
-
-    /* ---------- 音乐库 ----------
-       tracks     上传的音乐，src 指向 music/ 目录下的文件
-       playlists  歌单，tracks 存 track 的 id
-       recommend  外链推荐（跳转到外部平台），展示在 music.html
-    */
     music: {
         tracks: [
             {
@@ -60,7 +68,7 @@ window.SITE_DATA = {
                 platform: "网易云音乐"
             }
         ]
-    },
+    }  /* 音乐库（tracks 歌曲 / playlists 歌单 / recommend 外链推荐） */,
     profile: {
         name: "Rin9",
         title: "日常记录 · 未来作品集",
@@ -70,24 +78,24 @@ window.SITE_DATA = {
         bgm: "music/bgm.wav",
         location: "中国",
         email: "1738177703@qq.com"
-    },
+    }  /* 基本资料 */,
     links: [
-        {
-            icon: "🎵",
-            name: "我的抖音主页",
-            url: "https://www.douyin.com/user/self?from_tab_name=Rin9"
-        },
         {
             icon: "📺",
             name: "我的bilibili主页",
             url: "https://space.bilibili.com/501867168?spm_id_from=333.1007.0.0"
         },
         {
+            icon: "🎵",
+            name: "我的抖音主页",
+            url: "https://www.douyin.com/user/self?from_tab_name=Rin9"
+        },
+        {
             icon: "🐱",
             name: "我的GitHub主页",
             url: "https://github.com/OoRin9oO"
         }
-    ],
+    ]  /* 常用链接 */,
     milestones: [
         {
             date: "2026-10-26",
@@ -107,29 +115,10 @@ window.SITE_DATA = {
             desc: "不再只收藏别人的代码，开始把自己的东西一个个做出来。",
             icon: "🎯"
         }
-    ],
+    ]  /* 成长里程碑（按时间倒序，最新的放最前） */,
     works: [
         {
-            title: "爱依计划",
-            desc: "这是一个用来约束我自己和AI灵魂的项目，通过不断提升自我与完善AI对我的印象来得到一个对自我的更加深刻的认识。",
-            status: "wip",
-            tags: ["AI", "自我"]
-        },
-        {
-            title: "Github娘-project！",
-            desc: "这是一个IP企划，为Github创建了一个符合我心目中的形象，未来会不断更新她的图片与视频内容。",
-            status: "wip",
-            cover: "img/k-20261026-k.webp",
-            tags: ["原创IP", "视频", "图片"]
-        },
-        {
-            title: "被伪装修女的创世神养大了！",
-            desc: "这是一本我写的原创内容的小说，有兴趣的时候才会更新，目前已经累计写了5w字，可在番茄上直接搜索观看。",
-            status: "wip",
-            tags: ["小说", "轻小说"]
-        },
-        {
-            title: "这个网站本身",
+            title: "爱依计划（发布测试）",
             desc: "纯静态的个人主页，记录日常与作品。GitHub Pages 托管，没有后端，加内容只改一个数据文件。",
             status: "wip",
             cover: "img/a-20261025-a.webp",
@@ -142,6 +131,12 @@ window.SITE_DATA = {
             ]
         },
         {
+            title: "爱依计划",
+            desc: "这是一个用来约束我自己和AI灵魂的项目，通过不断提升自我与完善AI对我的印象来得到一个对自我的更加深刻的认识。",
+            status: "wip",
+            tags: ["AI", "自我"]
+        },
+        {
             title: "一个病娇小游戏",
             desc: "这是一个即兴开发的小游戏，目标是不断提升运用电脑软件工具的能力，达到人与AI一起发展的美好愿景",
             status: "wip",
@@ -149,12 +144,25 @@ window.SITE_DATA = {
             cover: ""
         },
         {
+            title: "被伪装修女的创世神养大了！",
+            desc: "这是一本我写的原创内容的小说，有兴趣的时候才会更新，目前已经累计写了5w字，可在番茄上直接搜索观看。",
+            status: "wip",
+            tags: ["小说", "轻小说"]
+        },
+        {
+            title: "Github娘-project！",
+            desc: "这是一个IP企划，为Github创建了一个符合我心目中的形象，未来会不断更新她的图片与视频内容。",
+            status: "wip",
+            cover: "img/k-20261026-k.webp",
+            tags: ["原创IP", "视频", "图片"]
+        },
+        {
             title: "植物大战僵尸野狗改版",
             desc: "这是一个如同笑话般的对于植物大战僵尸的改版，只是一时兴起的项目，目前不打算制作。",
             status: "plan",
             tags: ["游戏", "二创"]
         }
-    ],
+    ]  /* 作品集（status: done 完成 / wip 进行中 / plan 规划中） */,
     notes: [
         {
             date: "2026-10-26",
@@ -178,7 +186,7 @@ window.SITE_DATA = {
             title: "一个安静的日子",
             desc: "下午下了场雨，把窗户开着听了一会儿。这种时刻适合什么也不做。"
         }
-    ],
+    ]  /* 日常记录（images 配图可点击放大） */,
     gallery: [
         {
             src: "img/a-20261025-a.webp",
@@ -212,5 +220,5 @@ window.SITE_DATA = {
             src: "img/h-20261025-h.webp",
             caption: "粉发的兔耳"
         }
-    ]
+    ]  /* 照片墙（按原始比例完整显示，不裁剪） */
 };

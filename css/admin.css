@@ -471,6 +471,39 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 .pl-pick-item input { accent-color: var(--accent); }
 .pl-pick-artist { margin-left: auto; font-size: 0.74rem; color: var(--faint); }
 
+/* ---------- 发布状态 ---------- */
+.pub-badge {
+    padding: 9px 13px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.pub-badge.ok {
+    background: rgba(95, 211, 154, 0.14);
+    border: 1px solid rgba(95, 211, 154, 0.4);
+    color: var(--green);
+}
+.pub-badge.warn {
+    background: rgba(245, 194, 107, 0.14);
+    border: 1px solid rgba(245, 194, 107, 0.4);
+    color: var(--yellow);
+}
+.pub-info {
+    font-size: 0.78rem;
+    color: var(--dim);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.pub-info code {
+    background: var(--bg-3);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.74rem;
+    color: var(--accent);
+}
+
 /* ---------- 页面布局列表 ---------- */
 .lay-row {
     display: flex; align-items: center; gap: 7px;

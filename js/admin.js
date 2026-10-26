@@ -2020,28 +2020,81 @@ window.SITE_DATA = `;
        ============================================================ */
     function renderPublish(main) {
         main.innerHTML = `<div class="sec-head">
-            <h2>🚀 发布设置</h2><p>配置 GitHub，令牌只存在你本机浏览器</p></div>
-            <div class="item"><div class="item-body">
-                <div class="row">
-                    <div class="field"><label>仓库所有者</label>
-                        <input class="inp" id="gOwner" value="${esc(S.owner)}" placeholder="OoRin9oO"></div>
-                    <div class="field"><label>仓库名</label>
-                        <input class="inp" id="gRepo" value="${esc(S.repo)}" placeholder="OoRin9oO.github.io"></div>
-                </div>
-                <div class="field"><label>分支</label>
-                    <input class="inp" id="gBranch" value="${esc(S.branch)}" placeholder="main"></div>
-                <div class="field"><label>Personal Access Token</label>
-                    <input class="inp" id="gToken" type="password" value="${esc(S.token)}" placeholder="github_pat_...">
-                    <div class="tip">
-                        在 GitHub → Settings → Developer settings → Personal access tokens 生成，
-                        勾选 <code>repo</code> 权限（公开仓库勾 <code>public_repo</code> 也够）。<br>
-                        令牌只保存在你本机 localStorage，不会上传到任何第三方。
-                    </div></div>
-                <div style="display:flex;gap:9px;margin-top:14px">
-                    <button class="btn" id="btnTestToken">🔌 测试连接</button>
-                    <button class="btn ghost" id="btnSaveToken">💾 记住设置</button>
-                </div>
-            </div></div>`;
+            <h2>🚀 发布设置</h2><p>发布方式与 GitHub 配置</p></div>
+
+        <div class="item"><div class="item-body">
+            <div class="pub-status" id="pubStatus">
+                <div class="tip">正在检测本地 git 状态…</div>
+            </div>
+        </div></div>
+
+        <div class="item"><div class="item-body">
+            <div style="display:flex;gap:9px;margin-top:14px">
+                <button class="btn ghost" id="btnTestToken">🔌 测试 Token</button>
+                <button class="btn ghost" id="btnSaveToken">💾 记住设置</button>
+                <button class="btn ghost" id="btnCheckGit">🔍 重新检测</button>
+            </div>
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">GitHub API 备用通道</span>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:10px">
+                一般用不上。只有当「保存并发布」提示本地 git 不可用时，才需要填这里。<br>
+                令牌需要勾选 <code>Contents → Read and write</code>（classic token 则是 <code>repo</code>），
+                否则会报 403 权限不足。
+            </div>
+            <div class="row">
+                <div class="field"><label>仓库所有者</label>
+                    <input class="inp" id="gOwner" value="${esc(S.owner)}" placeholder="OoRin9oO"></div>
+                <div class="field"><label>仓库名</label>
+                    <input class="inp" id="gRepo" value="${esc(S.repo)}" placeholder="OoRin9oO.github.io"></div>
+            </div>
+            <div class="field"><label>分支</label>
+                <input class="inp" id="gBranch" value="${esc(S.branch)}" placeholder="main"></div>
+            <div class="field"><label>Personal Access Token</label>
+                <input class="inp" id="gToken" type="password" value="${esc(S.token)}" placeholder="github_pat_...">
+                <div class="tip">
+                    GitHub → Settings → Developer settings → Personal access tokens 生成。<br>
+                    令牌只保存在你本机 localStorage，不会上传到任何第三方。
+                </div></div>
+        </div></div>`;
+
+        // 检测本地 git
+        const checkGit = async () => {
+            const box = $("#pubStatus");
+            if (!box) return;
+            try {
+                const res = await fetch("/api/gitstatus");
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const j = await res.json();
+                if (!j.ok) {
+                    box.innerHTML = `<div class="pub-badge warn">⚠️ 本地 git 不可用</div>
+                        <div class="tip" style="margin-top:8px">${esc(j.error || "")}<br>
+                        请改用下面的 GitHub API 备用通道。</div>`;
+                    return;
+                }
+                const changed = (j.changes || []).length;
+                box.innerHTML = `
+                    <div class="pub-badge ok">✓ 本地 git 可用 —— 直接点「保存并发布」就行</div>
+                    <div class="pub-info">
+                        <div>分支 <code>${esc(j.branch || "?")}</code></div>
+                        <div>远程 <code>${esc(j.remote || "?")}</code></div>
+                        <div>${changed ? `待提交 ${changed} 处改动` : "工作区干净"}</div>
+                    </div>
+                    <div class="tip" style="margin-top:8px">
+                        发布会用本机 git 已登录的凭据推送，不需要 Token。
+                    </div>`;
+            } catch (e) {
+                box.innerHTML = `<div class="pub-badge warn">⚠️ 本地发布服务未启动</div>
+                    <div class="tip" style="margin-top:8px">
+                        请用 <code>start-editor.bat</code> 启动（而不是直接双击 admin.html），<br>
+                        或者改用下面的 GitHub API 备用通道。
+                    </div>`;
+            }
+        };
+        checkGit();
+        $("#btnCheckGit")?.addEventListener("click", checkGit);
 
         $("#btnSaveToken").addEventListener("click", () => {
             S.owner = $("#gOwner").value.trim();
@@ -2131,105 +2184,17 @@ window.SITE_DATA = `;
     }
 
     /* ============================================================
-       九、发布到 GitHub
+       九、发布
+       —— 优先走本地 git（用本机已登录的凭据，不需要 Token）
+       —— 本地服务不可用时，回退到 GitHub API（需要 PAT）
        ============================================================ */
-    async function publish() {
-        const token = S.token;
-        const owner = S.owner || REPO.owner;
-        const repo = S.repo || REPO.repo;
-        const branch = S.branch || REPO.branch;
 
-        if (!token) {
-            S.section = "publish";
-            renderSide();
-            render();
-            return toast("先在「发布设置」里填令牌", "err");
-        }
-        if (!confirm("将提交并推送到 GitHub，Pages 会自动重新部署。\n继续？")) return;
-
-        toast("正在提交…");
-        const H = {
-            Authorization: "Bearer " + token,
-            Accept: "application/vnd.github+json",
-            "Content-Type": "application/json",
-        };
-
-        try {
-            // 0. 若已授权过目录，顺手把新图/新音频也写进本地仓库，保持两边一致
-            if (S.dirHandle) {
-                for (const im of S.newImages) {
-                    await writeFile(S.dirHandle, IMG_DIR + im.name, im.blob);
-                }
-                for (const au of (S.newAudio || [])) {
-                    await writeFile(S.dirHandle, "music/" + au.name, au.blob);
-                }
-            }
-
-            // 1. 取分支当前状态
-            const refRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch}`, { headers: H });
-            if (!refRes.ok) throw new Error("取分支失败 HTTP " + refRes.status);
-            const ref = await refRes.json();
-            const baseCommit = ref.object.sha;
-
-            const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${baseCommit}`, { headers: H });
-            const baseCommitInfo = await commitRes.json();
-            const baseTree = baseCommitInfo.tree.sha;
-
-            // 2. 建 blob：data.js
-            // GitHub 的 git blob API 只支持 base64 编码，统一走 base64
-            const dataText = serialize();
-            const dataB64 = await textToBase64(dataText);
-            const dataBlob = await createBlob(H, owner, repo, dataB64, "base64");
-            const treeItems = [
-                { path: DATA_FILE, mode: "100644", type: "blob", sha: dataBlob.sha },
-            ];
-
-            // 3. 建 blob：新增的图片（必须一起提交，否则线上图片 404）
-            for (const im of S.newImages) {
-                const b64 = await blobToBase64(im.blob);
-                const imgBlob = await createBlob(H, owner, repo, b64, "base64");
-                treeItems.push({
-                    path: IMG_DIR + im.name,
-                    mode: "100644", type: "blob", sha: imgBlob.sha,
-                });
-            }
-
-            // 3b. 建 blob：新增的音频
-            const audios = S.newAudio || [];
-            for (const au of audios) {
-                const b64 = await blobToBase64(au.blob);
-                const auBlob = await createBlob(H, owner, repo, b64, "base64");
-                treeItems.push({
-                    path: "music/" + au.name,
-                    mode: "100644", type: "blob", sha: auBlob.sha,
-                });
-            }
-
-            const tree = await createTree(H, owner, repo, baseTree, treeItems);
-
-            // 4. 提交
-            const nImg = S.newImages.length, nAu = audios.length;
-            const msgParts = [];
-            if (nImg) msgParts.push(nImg + " 张新图");
-            if (nAu) msgParts.push(nAu + " 个音频");
-            const msg = msgParts.length ? `更新网站内容（${msgParts.join("、")}）` : "更新网站内容";
-            const commit = await createCommit(H, owner, repo, tree.sha, baseCommit, msg);
-            await updateRef(H, owner, repo, branch, commit.sha);
-
-            S.newImages = [];
-            S.newAudio = [];
-            markClean("已推送到 GitHub");
-            toast("发布成功！约 1 分钟后线上更新", "ok");
-        } catch (e) {
-            toast("发布失败：" + e.message, "err");
-        }
-    }
-
+    /* 把 blob 转 base64（纯数据，不含 "data:" 前缀） */
     function blobToBase64(blob) {
         return new Promise((resolve, reject) => {
             const fr = new FileReader();
             fr.onload = () => resolve(String(fr.result).split(",")[1] || "");
-            fr.onerror = () => reject(new Error("图片编码失败"));
+            fr.onerror = () => reject(new Error("文件编码失败"));
             fr.readAsDataURL(blob);
         });
     }
@@ -2245,12 +2210,126 @@ window.SITE_DATA = `;
         return btoa(bin);
     }
 
-    async function createBlob(H, owner, repo, text, encoding) {
+    /* ---------- 方式一：本地 git ---------- */
+    async function publishViaLocalGit() {
+        const payload = {
+            dataJs: serialize(),
+            branch: S.branch || REPO.branch,
+            message: buildCommitMessage(),
+            images: [],
+            audio: [],
+        };
+
+        for (const im of S.newImages) {
+            payload.images.push({ name: im.name, data: await blobToBase64(im.blob) });
+        }
+        for (const au of (S.newAudio || [])) {
+            payload.audio.push({ name: au.name, data: await blobToBase64(au.blob) });
+        }
+
+        const res = await fetch("/api/publish", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error("本地服务返回 HTTP " + res.status);
+        return await res.json();
+    }
+
+    function buildCommitMessage() {
+        const nImg = S.newImages.length;
+        const nAu = (S.newAudio || []).length;
+        const parts = [];
+        if (nImg) parts.push(nImg + " 张新图");
+        if (nAu) parts.push(nAu + " 个音频");
+        return parts.length
+            ? `更新网站内容（${parts.join("、")}）`
+            : "更新网站内容";
+    }
+
+    /* ---------- 方式二：GitHub API（需要 PAT） ---------- */
+    async function publishViaApi() {
+        const token = S.token;
+        const owner = S.owner || REPO.owner;
+        const repo = S.repo || REPO.repo;
+        const branch = S.branch || REPO.branch;
+
+        const H = {
+            Authorization: "Bearer " + token,
+            Accept: "application/vnd.github+json",
+            "Content-Type": "application/json",
+        };
+
+        // 1. 取分支当前状态
+        const refRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${branch}`, { headers: H });
+        if (!refRes.ok) throw new Error(await ghError(refRes, "取分支失败"));
+        const ref = await refRes.json();
+        const baseCommit = ref.object.sha;
+
+        const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${baseCommit}`, { headers: H });
+        if (!commitRes.ok) throw new Error(await ghError(commitRes, "取提交信息失败"));
+        const baseCommitInfo = await commitRes.json();
+        const baseTree = baseCommitInfo.tree.sha;
+
+        // 2. 建 blob：data.js
+        const dataB64 = await textToBase64(serialize());
+        const dataBlob = await createBlob(H, owner, repo, dataB64);
+        const treeItems = [
+            { path: DATA_FILE, mode: "100644", type: "blob", sha: dataBlob.sha },
+        ];
+
+        // 3. 新图片 / 新音频（必须一起提交，否则线上 404）
+        for (const im of S.newImages) {
+            const b64 = await blobToBase64(im.blob);
+            const blob = await createBlob(H, owner, repo, b64);
+            treeItems.push({ path: IMG_DIR + im.name, mode: "100644", type: "blob", sha: blob.sha });
+        }
+        for (const au of (S.newAudio || [])) {
+            const b64 = await blobToBase64(au.blob);
+            const blob = await createBlob(H, owner, repo, b64);
+            treeItems.push({ path: "music/" + au.name, mode: "100644", type: "blob", sha: blob.sha });
+        }
+
+        const tree = await createTree(H, owner, repo, baseTree, treeItems);
+        const commit = await createCommit(H, owner, repo, tree.sha, baseCommit, buildCommitMessage());
+        await updateRef(H, owner, repo, branch, commit.sha);
+        return { ok: true, message: "发布成功", steps: ["已推送到 GitHub"] };
+    }
+
+    /* 把 GitHub 的错误详情转成人话 */
+    async function ghError(res, prefix) {
+        let detail = "";
+        try {
+            const j = await res.json();
+            detail = j.message || "";
+        } catch (e) { /* ignore */ }
+
+        if (res.status === 401) {
+            return prefix + "：令牌无效或已过期（HTTP 401）";
+        }
+        if (res.status === 403) {
+            const hint = detail.includes("write") || detail.includes("permission")
+                ? "令牌没有写权限"
+                : detail || "权限不足";
+            return prefix + "：" + hint + "（HTTP 403）\n" +
+                "· 令牌需要勾选 Contents → Read and write\n" +
+                "· 或者直接用「保存到本地」，再由我帮你 commit + push";
+        }
+        if (res.status === 404) {
+            return prefix + "：仓库或分支不存在（HTTP 404）";
+        }
+        if (res.status === 422) {
+            return prefix + "：GitHub 拒绝了这次提交，可能是分支保护或数据有问题（HTTP 422）";
+        }
+        return prefix + "：HTTP " + res.status + (detail ? " — " + detail : "");
+    }
+
+    async function createBlob(H, owner, repo, contentB64) {
         const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
             method: "POST", headers: H,
-            body: JSON.stringify({ content: text, encoding }),
+            body: JSON.stringify({ content: contentB64, encoding: "base64" }),
         });
-        if (!res.ok) throw new Error("创建 blob 失败 HTTP " + res.status);
+        if (!res.ok) throw new Error(await ghError(res, "创建 blob 失败"));
         return res.json();
     }
 
@@ -2259,7 +2338,7 @@ window.SITE_DATA = `;
             method: "POST", headers: H,
             body: JSON.stringify({ base_tree: baseTree, tree: items }),
         });
-        if (!res.ok) throw new Error("创建 tree 失败 HTTP " + res.status);
+        if (!res.ok) throw new Error(await ghError(res, "创建 tree 失败"));
         return res.json();
     }
 
@@ -2268,7 +2347,7 @@ window.SITE_DATA = `;
             method: "POST", headers: H,
             body: JSON.stringify({ message, tree: treeSha, parents: [parentSha] }),
         });
-        if (!res.ok) throw new Error("创建 commit 失败 HTTP " + res.status);
+        if (!res.ok) throw new Error(await ghError(res, "创建 commit 失败"));
         return res.json();
     }
 
@@ -2277,8 +2356,68 @@ window.SITE_DATA = `;
             method: "PATCH", headers: H,
             body: JSON.stringify({ sha, force: false }),
         });
-        if (!res.ok) throw new Error("更新分支失败 HTTP " + res.status);
+        if (!res.ok) throw new Error(await ghError(res, "更新分支失败"));
         return res.json();
+    }
+
+    /* ---------- 发布入口 ---------- */
+    async function publish() {
+        if (!confirm("将提交并推送到 GitHub，Pages 会自动重新部署。\n继续？")) return;
+
+        toast("正在发布…", "ok");
+
+        // 优先用本地 git（不需要 Token）
+        let localOk = false;
+        try {
+            const r = await publishViaLocalGit();
+            if (r.ok) {
+                S.newImages = [];
+                S.newAudio = [];
+                markClean("已推送到 GitHub");
+                toast(r.message || "发布成功！约 1 分钟后线上更新", "ok");
+                localOk = true;
+            } else {
+                // 本地服务在，但 git 出错了
+                showPublishError(r);
+                return;
+            }
+        } catch (e) {
+            // 本地服务不可用（可能是用别的方式打开的页面）
+            console.warn("本地发布不可用：", e.message);
+        }
+
+        if (localOk) return;
+
+        // 回退到 GitHub API
+        if (!S.token) {
+            S.section = "publish";
+            renderSide();
+            render();
+            return toast("本地 git 不可用，且未配置 Token。请看「发布设置」", "err");
+        }
+
+        try {
+            await publishViaApi();
+            S.newImages = [];
+            S.newAudio = [];
+            markClean("已推送到 GitHub");
+            toast("发布成功！约 1 分钟后线上更新", "ok");
+        } catch (e) {
+            showPublishError({ error: e.message });
+        }
+    }
+
+    /* 发布失败的详细提示 */
+    function showPublishError(r) {
+        const steps = (r.steps || []).map(s => "· " + s).join("\n");
+        showModal("发布失败", `
+            <div style="white-space:pre-wrap;font-size:.85rem;line-height:1.7">${esc(r.error || "未知错误")}</div>
+            ${steps ? `<div style="margin-top:10px;font-size:.8rem;color:var(--dim);white-space:pre-wrap">已完成：\n${esc(steps)}</div>` : ""}
+            ${r.hint ? `<div style="margin-top:10px;font-size:.8rem;color:var(--yellow)">${esc(r.hint)}</div>` : ""}
+            <div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--bg-3);font-size:.78rem;color:var(--dim)">
+                兜底方案：点「💾 保存到本地」，然后告诉我一声，我帮你 commit + push。
+            </div>`,
+            [{ label: "知道了", primary: true }]);
     }
 
     /* ============================================================
