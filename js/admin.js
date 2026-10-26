@@ -27,6 +27,7 @@
         owner: localStorage.getItem("rin9-owner") || "",
         repo: localStorage.getItem("rin9-repo") || REPO.repo,
         branch: localStorage.getItem("rin9-branch") || REPO.branch,
+        compress: null,      // 图片压缩设置
     };
 
     /* ---------- 工具 ---------- */
@@ -161,72 +162,159 @@ window.SITE_DATA = `;
     /* ============================================================
        三、命名：字母-日期-字母
        ============================================================ */
-    function nextName(index) {
+
+    /* 内容指纹，用来识别"同一张图拖了多次" */
+    async function fingerprint(file) {
+        const buf = await file.arrayBuffer();
+        const hash = await crypto.subtle.digest("SHA-256", buf);
+        return Array.from(new Uint8Array(hash).slice(0, 8))
+            .map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function nextName() {
         // 找出现有命名里最大的字母序号
         let max = -1;
-        $$("#galleryGrid img, .thumb img").forEach(() => {});
-        const existing = (S.data.gallery || []).map(g => g.src || "");
-        existing.forEach(src => {
-            const m = /img\/([a-z])-(\d{8})-([a-z])\.webp$/.exec(src);
+        const scan = (src) => {
+            const m = /img\/([a-z])-(\d{8})-([a-z])\./.exec(src || "");
             if (m) {
                 const i = m[1].charCodeAt(0) - 97;
                 if (i > max) max = i;
             }
-        });
-        S.newImages.forEach(im => {
-            const m = /^([a-z])-\d{8}-[a-z]\.webp$/.exec(im.name);
-            if (m) {
-                const i = m[1].charCodeAt(0) - 97;
-                if (i > max) max = i;
-            }
-        });
+        };
+        (S.data.gallery || []).forEach(g => scan(g.src));
+        (S.data.works || []).forEach(w => scan(w.cover));
+        (S.data.notes || []).forEach(n => (n.images || []).forEach(scan));
+        S.newImages.forEach(im => scan("img/" + im.name));
+
         const letter = String.fromCharCode(97 + ((max + 1) % 26));
-        return `${letter}-${todayStr()}-${letter}.webp`;
+        return `${letter}-${todayStr()}-${letter}`;
     }
 
     /* ============================================================
        四、图片压缩（浏览器内，Canvas）
+       —— 支持格式选择、质量调节、尺寸上限
        ============================================================ */
-    async function compressImage(file, name) {
+
+    /* 压缩设置，存本地 */
+    const DEFAULT_COMPRESS = {
+        format: "webp",     // webp / jpg / png
+        quality: 0.82,      // 质量
+        maxEdge: 1600,      // 长边上限，0 = 不缩放
+        keepAlpha: true,    // 带透明时保留 PNG
+    };
+
+    function loadCompressSettings() {
+        try {
+            const raw = localStorage.getItem("rin9-compress");
+            if (raw) return Object.assign({}, DEFAULT_COMPRESS, JSON.parse(raw));
+        } catch (e) { /* ignore */ }
+        return Object.assign({}, DEFAULT_COMPRESS);
+    }
+
+    function saveCompressSettings(s) {
+        S.compress = s;
+        localStorage.setItem("rin9-compress", JSON.stringify(s));
+    }
+
+    async function compressImage(file, name, opts) {
+        // 优先级：显式传入 > 当前会话设置 > localStorage > 默认值
+        const base = S.compress || loadCompressSettings();
+        const o = Object.assign({}, base, opts || {});
         const bitmap = await createImageBitmap(file);
-        const MAX = 1600;
         let { width, height } = bitmap;
-        if (Math.max(width, height) > MAX) {
-            const s = MAX / Math.max(width, height);
+
+        // 等比缩放（绝不裁剪）
+        if (o.maxEdge > 0 && Math.max(width, height) > o.maxEdge) {
+            const s = o.maxEdge / Math.max(width, height);
             width = Math.round(width * s);
             height = Math.round(height * s);
         }
+
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        // JPG 不支持透明，先铺白底，否则透明区域会变黑
+        if (o.format === "jpg") {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, width, height);
+        }
         ctx.drawImage(bitmap, 0, 0, width, height);
         bitmap.close();
 
-        const blob = await new Promise(res => canvas.toBlob(res, "image/webp", 0.82));
+        const mime = o.format === "jpg" ? "image/jpeg"
+            : o.format === "png" ? "image/png" : "image/webp";
+        const blob = await new Promise(res => canvas.toBlob(res, mime, o.quality));
         if (!blob) throw new Error("图片编码失败");
 
-        const dataUrl = canvas.toDataURL("image/webp", 0.6);
-        return { name, blob, dataUrl, w: width, h: height };
+        const ext = o.format === "jpg" ? "jpg" : o.format;
+        // 传入的 name 可能已带扩展名，统一按当前格式重写
+        const stem = name.replace(/\.(webp|jpg|jpeg|png)$/i, "");
+        const finalName = stem + "." + ext;
+        const dataUrl = canvas.toDataURL(mime, 0.6);
+        return {
+            name: finalName, blob, dataUrl,
+            w: width, h: height,
+            origSize: file.size, outSize: blob.size,
+            origName: file.name,
+            format: ext,
+        };
     }
 
     async function handleFiles(files) {
         const list = Array.from(files).filter(f => f.type.startsWith("image/"));
         if (!list.length) return;
 
-        toast(`正在压缩 ${list.length} 张图片…`);
+        toast(`正在处理 ${list.length} 张图片…`);
+        let added = 0, dup = 0;
+        const details = [];
+
         for (const file of list) {
             try {
-                const name = nextName();
-                const img = await compressImage(file, name);
+                // 内容指纹去重：同一张图拖多次只处理一次
+                const fp = await fingerprint(file);
+                const exist = S.newImages.find(im => im.fp === fp);
+                if (exist) {
+                    dup++;
+                    details.push({ dup: true, name: exist.name, origName: file.name });
+                    continue;
+                }
+
+                const stem = nextName();
+                const img = await compressImage(file, stem);
+                img.fp = fp;
                 S.newImages.push(img);
-                markDirty();
+                added++;
+                details.push({
+                    dup: false, name: img.name, origName: file.name,
+                    origSize: img.origSize, outSize: img.outSize,
+                    w: img.w, h: img.h,
+                });
             } catch (e) {
                 toast("处理失败：" + file.name + " — " + e.message, "err");
             }
         }
-        render();
-        toast(`已加入 ${list.length} 张图片，记得点「保存」`, "ok");
+
+        if (added) {
+            markDirty();
+            render();
+            const totalOrig = details.filter(d => !d.dup).reduce((s, d) => s + (d.origSize || 0), 0);
+            const totalOut = details.filter(d => !d.dup).reduce((s, d) => s + (d.outSize || 0), 0);
+            const saved = totalOrig ? Math.round((1 - totalOut / totalOrig) * 100) : 0;
+            let msg = `已处理 ${added} 张`;
+            if (totalOrig) msg += `，${fmtSize(totalOrig)} → ${fmtSize(totalOut)}（省 ${saved}%）`;
+            if (dup) msg += `，${dup} 张重复已复用`;
+            toast(msg, "ok");
+        } else if (dup) {
+            toast(`${dup} 张重复图片，已复用已有文件`, "ok");
+        }
+    }
+
+    function fmtSize(bytes) {
+        if (!bytes) return "0B";
+        if (bytes < 1024) return bytes + "B";
+        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + "KB";
+        return (bytes / 1024 / 1024).toFixed(1) + "MB";
     }
 
     /* 把新图片挂到指定条目上 */
@@ -287,6 +375,7 @@ window.SITE_DATA = `;
     function render() {
         const main = $("#main");
         if (S.section === "settings") return renderSettings(main);
+        if (S.section === "images") return renderImages(main);
         if (S.section === "publish") return renderPublish(main);
 
         const sec = SECTIONS.find(s => s.id === S.section);
@@ -297,15 +386,17 @@ window.SITE_DATA = `;
             <p>共 ${items.length} 条</p>
             <div class="spacer"></div>
             <button class="btn ghost sm" id="btnAdd">＋ 新增一条</button>
-        </div>`;
+        </div>
+        <div data-section="${S.section}">`;
 
         if (!items.length) {
             html += `<div class="drop" id="emptyAdd"><div class="drop-icon">📝</div>
                 <div class="drop-title">还没有内容</div>
-                <div class="drop-sub">点右上角「新增一条」</div></div>`;
+                <div class="drop-sub">点右上角「新增一条」，或直接把图拖进来</div></div>`;
         }
 
         html += items.map((it, i) => renderItem(S.section, it, i)).join("");
+        html += `</div>`;
         main.innerHTML = html;
 
         bindItemEvents(main);
@@ -410,9 +501,9 @@ window.SITE_DATA = `;
                             <div class="thumb-name">${esc((it.src || "").split("/").pop())}</div>
                         </div>` : ""}
                     </div>
-                    <div class="drop" data-drop style="margin-top:8px">
+                    <div class="drop" data-drop="gallery" data-kind="gallery" style="margin-top:8px">
                         <div class="drop-icon">📤</div>
-                        <div class="drop-title">拖图到这里替换，或点击选择</div>
+                        <div class="drop-title">拖图到这里替换</div>
                         <div class="drop-sub">自动压缩成 webp，按「字母-日期-字母」命名</div>
                     </div>
                     <input class="inp" data-k="src" value="${esc(it.src)}" style="margin-top:8px" placeholder="img/xxx.webp">
@@ -463,8 +554,13 @@ window.SITE_DATA = `;
                 <img src="${esc(cover)}" alt="">
                 <div class="thumb-name">${esc(cover.split("/").pop())}</div>
             </div></div>` : ""}
-            <input class="inp" data-k="cover" value="${esc(cover)}" placeholder="img/xxx.webp 或拖图到此处">
-            <div class="tip">留空表示没有封面</div></div>`;
+            <div class="drop" data-drop="cover" data-kind="works" style="margin-top:8px">
+                <div class="drop-icon">📤</div>
+                <div class="drop-title">拖图到这里设为封面</div>
+                <div class="drop-sub">自动压缩成 webp</div>
+            </div>
+            <input class="inp" data-k="cover" value="${esc(cover)}" placeholder="img/xxx.webp" style="margin-top:8px">
+            <div class="tip">也可以直接填已有的图片路径</div></div>`;
     }
 
     function renderImagesField(it) {
@@ -477,10 +573,10 @@ window.SITE_DATA = `;
                     <div class="thumb-name">${esc(src.split("/").pop())}</div>
                 </div>`).join("")}
             </div>
-            <div class="drop" data-drop style="margin-top:8px">
+            <div class="drop" data-drop="images" data-kind="notes" style="margin-top:8px">
                 <div class="drop-icon">📤</div>
-                <div class="drop-title">拖图到这里，或点击选择</div>
-                <div class="drop-sub">自动压缩成 webp</div>
+                <div class="drop-title">拖图到这里添加配图</div>
+                <div class="drop-sub">可拖多张，自动压缩成 webp</div>
             </div></div>`;
     }
 
@@ -602,36 +698,148 @@ window.SITE_DATA = `;
             render();
         }));
 
-        // 拖图区
+        // 拖图区的点击选择（真正的拖放由全局路由统一处理）
         $$("[data-drop]", main).forEach(dz => {
-            dz.addEventListener("click", () => pickFiles(dz.closest(".item")));
-            dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("over"); });
-            dz.addEventListener("dragleave", () => dz.classList.remove("over"));
-            dz.addEventListener("drop", async (e) => {
-                e.preventDefault();
-                dz.classList.remove("over");
-                const item = dz.closest(".item");
-                const kind = item.dataset.kind;
-                const idx = Number(item.dataset.i);
-                const before = S.newImages.length;
-                await handleFiles(e.dataTransfer.files);
-                const added = S.newImages.slice(before);
-                if (!added.length) return;
-                if (kind === "notes") {
-                    S.data[kind][idx].images = S.data[kind][idx].images || [];
-                    added.forEach(im => S.data[kind][idx].images.push(IMG_DIR + im.name));
-                } else if (kind === "works") {
-                    S.data[kind][idx].cover = IMG_DIR + added[0].name;
-                } else if (kind === "gallery") {
-                    S.data[kind][idx].src = IMG_DIR + added[0].name;
-                }
-                markDirty();
-                render();
-            });
+            dz.addEventListener("click", () => pickFiles(dz.closest(".item"), dz.dataset.drop));
         });
     }
 
-    function pickFiles(item) {
+    /* ============================================================
+       拖放路由引擎
+       —— 根据鼠标位置决定图片落到哪里
+       优先级：具体 drop 区 > 条目卡片 > 板块区域 > 照片墙
+       ============================================================ */
+
+    /* 判断一个元素该接收什么样的图片，返回落点描述 */
+    function resolveDropTarget(x, y) {
+        const el = document.elementFromPoint(x, y);
+        if (!el) return null;
+
+        // 1) 命中具体的 drop 区
+        const dz = el.closest("[data-drop]");
+        if (dz) {
+            const item = dz.closest(".item");
+            const kind = item ? item.dataset.kind : dz.dataset.kind;
+            const idx = item ? Number(item.dataset.i) : -1;
+            const mode = dz.dataset.drop;
+            return {
+                mode, kind, idx, el: dz,
+                label: {
+                    cover: "设为封面",
+                    images: "添加为配图",
+                    gallery: "设为照片",
+                }[mode] || "加入",
+                field: mode === "cover" ? "封面" : mode === "images" ? "配图" : "照片",
+            };
+        }
+
+        // 2) 命中条目卡片（但不在具体字段上）→ 按条目类型智能判断
+        const item = el.closest(".item");
+        if (item) {
+            const kind = item.dataset.kind;
+            const idx = Number(item.dataset.i);
+            // 落在作品标题/说明上 → 意图是换封面
+            // 落在配图缩略图上 → 意图是加配图
+            // 落在说明文字框上 → 意图是加配图
+            if (kind === "works") {
+                return { mode: "cover", kind, idx, el: item,
+                         label: "设为封面", field: "封面" };
+            }
+            if (kind === "notes") {
+                return { mode: "images", kind, idx, el: item,
+                         label: "添加为配图", field: "配图" };
+            }
+            if (kind === "gallery") {
+                return { mode: "gallery", kind, idx, el: item,
+                         label: "设为照片", field: "照片" };
+            }
+        }
+
+        // 3) 命中某个板块区域 → 该板块的默认落点
+        const sec = el.closest("[data-section]");
+        if (sec) {
+            const kind = sec.dataset.section;
+            const defaults = {
+                works: { mode: "cover", label: "加为新作品的封面", field: "封面" },
+                notes: { mode: "images", label: "加为新记录的配图", field: "配图" },
+                gallery: { mode: "gallery", label: "加为新照片", field: "照片" },
+                milestones: { mode: "gallery", label: "加到照片墙", field: "照片" },
+                links: { mode: "gallery", label: "加到照片墙", field: "照片" },
+            };
+            const d = defaults[kind] || { mode: "gallery", label: "加到照片墙", field: "照片" };
+            return { mode: d.mode, kind: null, idx: -1, el: sec, section: kind, ...d };
+        }
+
+        // 3.5) 在主区里但不在任何条目内 → 归属当前所在板块
+        // （板块内条目之间的缝隙很窄，命中 [data-section] 不现实）
+        if (el.closest(".main")) {
+            const cur = SECTIONS.find(s => s.id === S.section);
+            const kind = cur ? cur.id : "gallery";
+            const defaults = {
+                works: { mode: "cover", label: "加为新作品的封面", field: "封面" },
+                notes: { mode: "images", label: "加为新记录的配图", field: "配图" },
+                gallery: { mode: "gallery", label: "加为新照片", field: "照片" },
+                milestones: { mode: "gallery", label: "加到照片墙", field: "照片" },
+                links: { mode: "gallery", label: "加到照片墙", field: "照片" },
+            };
+            const d = defaults[kind] || { mode: "gallery", label: "加到照片墙", field: "照片" };
+            return { mode: d.mode, kind: null, idx: -1, el: null, section: kind, ...d };
+        }
+
+        // 4) 兜底 → 照片墙
+        return { mode: "gallery", kind: null, idx: -1, el: null,
+                 label: "加到照片墙", field: "照片" };
+    }
+
+    /* 把图片按落点描述写入数据 */
+    function applyDrop(target, images) {
+        if (!target || !images.length) return;
+
+        if (target.idx >= 0 && target.kind) {
+            // 落到具体条目
+            const it = S.data[target.kind][target.idx];
+            if (!it) return;
+            if (target.mode === "images") {
+                it.images = it.images || [];
+                images.forEach(im => it.images.push(IMG_DIR + im.name));
+            } else if (target.mode === "cover") {
+                it.cover = IMG_DIR + images[0].name;
+            } else if (target.mode === "gallery") {
+                it.src = IMG_DIR + images[0].name;
+            }
+            return;
+        }
+
+        // 落到板块 → 在该板块新建一条
+        if (target.section === "works") {
+            S.data.works.unshift({
+                title: "新作品",
+                desc: "",
+                status: "plan",
+                cover: IMG_DIR + images[0].name,
+                tags: [],
+            });
+        } else if (target.section === "notes") {
+            S.data.notes.unshift({
+                date: new Date().toISOString().slice(0, 10),
+                title: "新记录",
+                desc: "",
+                images: images.map(im => IMG_DIR + im.name),
+            });
+        } else if (target.section === "gallery") {
+            images.forEach(im => S.data.gallery.push({
+                src: IMG_DIR + im.name, caption: ""
+            }));
+        } else {
+            // 其他板块或兜底 → 照片墙
+            images.forEach(im => S.data.gallery.push({
+                src: IMG_DIR + im.name, caption: ""
+            }));
+        }
+    }
+
+    /* 点击选择文件（不走拖放路由，直接按传入的 mode 落位） */
+    function pickFiles(item, mode) {
         const inp = document.createElement("input");
         inp.type = "file";
         inp.accept = "image/*";
@@ -640,20 +848,24 @@ window.SITE_DATA = `;
             const before = S.newImages.length;
             await handleFiles(inp.files);
             const added = S.newImages.slice(before);
-            if (item) {
-                const kind = item.dataset.kind;
-                const idx = Number(item.dataset.i);
-                if (kind === "notes") {
-                    S.data[kind][idx].images = S.data[kind][idx].images || [];
-                    added.forEach(im => S.data[kind][idx].images.push(IMG_DIR + im.name));
-                } else if (kind === "works") {
-                    S.data[kind][idx].cover = added.length ? IMG_DIR + added[0].name : "";
-                } else if (kind === "gallery") {
-                    S.data[kind][idx].src = added.length ? IMG_DIR + added[0].name : "";
+            if (!added.length) return;
+
+            const kind = item ? item.dataset.kind : (mode === "cover" ? "works" : "notes");
+            const idx = item ? Number(item.dataset.i) : -1;
+            const it = S.data[kind] && S.data[kind][idx];
+
+            if (it) {
+                if (mode === "images") {
+                    it.images = it.images || [];
+                    added.forEach(im => it.images.push(IMG_DIR + im.name));
+                } else if (mode === "cover") {
+                    it.cover = IMG_DIR + added[0].name;
+                } else if (mode === "gallery") {
+                    it.src = IMG_DIR + added[0].name;
                 }
-                markDirty();
-                render();
             }
+            markDirty();
+            render();
         });
         inp.click();
     }
@@ -714,7 +926,330 @@ window.SITE_DATA = `;
     }
 
     /* ============================================================
-       七、发布设置
+       七、图片工具
+       —— webp 转换、压缩参数、孤儿文件清理
+       ============================================================ */
+    function renderImages(main) {
+        const c = S.compress || DEFAULT_COMPRESS;
+
+        // 找出被引用的图片
+        const used = new Set();
+        const collect = (src) => { if (src) used.add(src.split("/").pop()); };
+        (S.data.gallery || []).forEach(g => collect(g.src));
+        (S.data.works || []).forEach(w => { collect(w.cover); });
+        (S.data.notes || []).forEach(n => (n.images || []).forEach(collect));
+        (S.data.profile ? [S.data.profile.avatar, S.data.profile.bgm] : [])
+            .forEach(collect);
+
+        const newImgs = S.newImages.map(im => ({
+            name: im.name, size: im.blob.size, w: im.w, h: im.h,
+            origSize: im.origSize, origName: im.origName, isNew: true,
+        }));
+
+        main.innerHTML = `<div class="sec-head">
+            <h2>🖼️ 图片工具</h2>
+            <p>格式转换、压缩参数、垃圾清理</p></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">压缩与格式</span>
+        </div><div class="item-body">
+            <div class="row">
+                <div class="field"><label>输出格式</label>
+                    <select class="sel" id="cFormat">
+                        <option value="webp"${c.format === "webp" ? " selected" : ""}>WebP（最小，推荐）</option>
+                        <option value="jpg"${c.format === "jpg" ? " selected" : ""}>JPG（兼容性最好）</option>
+                        <option value="png"${c.format === "png" ? " selected" : ""}>PNG（无损，保留透明）</option>
+                    </select></div>
+                <div class="field"><label>长边上限</label>
+                    <select class="sel" id="cMax">
+                        <option value="0"${c.maxEdge === 0 ? " selected" : ""}>不缩放（保持原尺寸）</option>
+                        <option value="1200"${c.maxEdge === 1200 ? " selected" : ""}>1200px</option>
+                        <option value="1600"${c.maxEdge === 1600 ? " selected" : ""}>1600px（推荐）</option>
+                        <option value="2000"${c.maxEdge === 2000 ? " selected" : ""}>2000px</option>
+                        <option value="3000"${c.maxEdge === 3000 ? " selected" : ""}>3000px</option>
+                    </select></div>
+            </div>
+            <div class="field"><label>质量：<span id="cQVal">${Math.round(c.quality * 100)}</span>%</label>
+                <input type="range" id="cQuality" min="30" max="100" value="${Math.round(c.quality * 100)}"
+                    style="width:100%">
+                <div class="tip">质量越低体积越小。WebP 建议 75-85%，JPG 建议 80-90%</div></div>
+            <div style="display:flex;gap:9px">
+                <button class="btn ghost sm" id="btnResetC">恢复默认</button>
+                <button class="btn sm" id="btnTestC">试压一张看看效果</button>
+            </div>
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">本次会话新加的图片</span>
+            <div class="spacer"></div><span class="pill">${newImgs.length}</span>
+        </div><div class="item-body">
+            ${newImgs.length ? newImgs.map(im => `
+                <div class="thumb" style="width:100%;height:auto;display:flex;gap:12px;padding:8px;align-items:center">
+                    ${im.dataUrl
+                        ? `<img src="${im.dataUrl}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;flex:none">`
+                        : `<img src="img/${esc(im.name)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:6px;flex:none">`}
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:.82rem;font-weight:600">${esc(im.name)}</div>
+                        <div style="font-size:.74rem;color:var(--faint)">
+                            ${im.w}×${im.h} ·
+                            ${fmtSize(im.origSize)} → <span style="color:var(--green)">${fmtSize(im.size)}</span>
+                            ${im.origSize ? `（省 ${Math.round((1 - im.size / im.origSize) * 100)}%）` : ""}
+                        </div>
+                        <div style="font-size:.72rem;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                            原文件 ${esc(im.origName || "")}
+                        </div>
+                    </div>
+                </div>`).join("")
+            : `<div class="tip">还没有新图片。直接在任意位置拖图进来就会出现在这里。</div>`}
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">批量转换已有图片</span>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:8px">
+                把 img/ 目录里已经是 jpg/png 的老图转成 webp，同步更新所有引用路径。
+                转完后旧文件会留在磁盘上，确认无误可以手动删掉。
+            </div>
+            <button class="btn ghost sm" id="btnBatchConv">🔄 扫描并转换</button>
+            <div id="batchBox"></div>
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">图片引用检查</span>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:8px">
+                扫描 img/ 目录，找出没有被任何地方引用的图片（孤儿文件）。
+                拖图时如果同一张图拖了多次，会产生重复文件，这里能揪出来。
+            </div>
+            <button class="btn ghost sm" id="btnScanOrphan">🔍 扫描孤儿文件</button>
+            <div id="orphanBox"></div>
+        </div></div>`;
+
+        // 绑定
+        const upd = () => {
+            saveCompressSettings({
+                format: $("#cFormat").value,
+                maxEdge: Number($("#cMax").value),
+                quality: Number($("#cQuality").value) / 100,
+            });
+            $("#cQVal").textContent = $("#cQuality").value;
+        };
+        ["#cFormat", "#cMax", "#cQuality"].forEach(s =>
+            $(s).addEventListener("input", upd));
+        $("#cFormat").addEventListener("change", upd);
+        $("#cMax").addEventListener("change", upd);
+
+        $("#btnResetC").addEventListener("click", () => {
+            saveCompressSettings(Object.assign({}, DEFAULT_COMPRESS));
+            render();
+            toast("已恢复默认参数", "ok");
+        });
+
+        $("#btnTestC").addEventListener("click", async () => {
+            const inp = document.createElement("input");
+            inp.type = "file";
+            inp.accept = "image/*";
+            inp.addEventListener("change", async () => {
+                const f = inp.files[0];
+                if (!f) return;
+                const before = S.newImages.length;
+                await compressImage(f, "test-preview", {});
+                const img = S.newImages[S.newImages.length - 1] || null;
+                // 试压不入库
+                const tmp = await compressImage(f, "test-preview");
+                if (S.newImages.length > before) S.newImages.pop();
+                const saved = Math.round((1 - tmp.outSize / f.size) * 100);
+                showModal("压缩效果预览", `
+                    <div style="display:flex;gap:16px;align-items:flex-start">
+                        <div style="flex:1">
+                            <div class="tip" style="margin-bottom:6px">原图</div>
+                            <img src="${URL.createObjectURL(f)}" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+                            <div class="tip" style="margin-top:6px">${f.name}<br>${fmtSize(f.size)}</div>
+                        </div>
+                        <div style="flex:1">
+                            <div class="tip" style="margin-bottom:6px">压缩后（${tmp.w}×${tmp.h}）</div>
+                            <img src="${tmp.dataUrl}" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+                            <div class="tip" style="margin-top:6px">${esc(tmp.name)}<br>
+                                <span style="color:var(--green)">${fmtSize(tmp.outSize)}（省 ${saved}%）</span></div>
+                        </div>
+                    </div>`,
+                    [{ label: "知道了", primary: true }]);
+            });
+            inp.click();
+        });
+
+        $("#btnBatchConv").addEventListener("click", async () => {
+            const box = $("#batchBox");
+            box.innerHTML = `<div class="tip">扫描中…</div>`;
+            try {
+                // 1. 列出 img/ 下的非 webp 文件
+                const res = await fetch("img/");
+                const html = await res.text();
+                const all = [...html.matchAll(/href="([^"]+\.(?:webp|jpg|jpeg|png|gif))"/gi)]
+                    .map(m => decodeURIComponent(m[1].split("/").pop()))
+                    .filter(Boolean);
+                const targets = all.filter(n => !/\.webp$/i.test(n) && n !== "favicon.ico");
+                if (!targets.length) {
+                    box.innerHTML = `<div class="tip" style="color:var(--green)">
+                        ✓ img/ 里的图片都已经是 webp 了，没有需要转换的</div>`;
+                    return;
+                }
+
+                // 2. 逐个转（用当前压缩设置）
+                const results = [];
+                for (const name of targets) {
+                    try {
+                        const r = await fetch("img/" + name);
+                        if (!r.ok) throw new Error("读取失败");
+                        const blob = await r.blob();
+                        const file = new File([blob], name, { type: blob.type });
+                        const stem = name.replace(/\.(jpg|jpeg|png|gif)$/i, "");
+                        const out = await compressImage(file, stem, { format: "webp" });
+                        // 新文件名与旧名一致（只是扩展名变了）→ 路径引用要跟着改
+                        results.push({
+                            old: name, new: out.name,
+                            oldSize: blob.size, newSize: out.outSize,
+                            blob: out.blob, w: out.w, h: out.h,
+                        });
+                    } catch (e) {
+                        results.push({ old: name, error: e.message });
+                    }
+                }
+
+                const ok = results.filter(r => !r.error);
+                const failed = results.filter(r => r.error);
+
+                // 3. 更新 data.js 里的引用路径
+                const oldNames = ok.map(r => r.old);
+                const newNames = ok.map(r => r.new);
+                let replaced = 0;
+                const replaceInData = (obj) => {
+                    if (typeof obj === "string") {
+                        for (let i = 0; i < oldNames.length; i++) {
+                            if (obj.endsWith("/" + oldNames[i])) {
+                                replaced++;
+                                return obj.slice(0, obj.length - oldNames[i].length) + newNames[i];
+                            }
+                        }
+                        return obj;
+                    }
+                    if (Array.isArray(obj)) return obj.map(replaceInData);
+                    if (obj && typeof obj === "object") {
+                        const o = {};
+                        Object.keys(obj).forEach(k => { o[k] = replaceInData(obj[k]); });
+                        return o;
+                    }
+                    return obj;
+                };
+                // 只替换 data.js 里的图片路径（profile.avatar 等）
+                Object.keys(S.data).forEach(k => {
+                    const before = JSON.stringify(S.data[k]);
+                    const after = JSON.stringify(replaceInData(S.data[k]));
+                    if (before !== after) {
+                        S.data[k] = JSON.parse(after);
+                    }
+                });
+
+                // 4. 转换结果加入待保存列表
+                ok.forEach(r => {
+                    S.newImages.push({
+                        name: r.new, blob: r.blob,
+                        dataUrl: null, w: r.w, h: r.h,
+                        origSize: r.oldSize, outSize: r.newSize,
+                        origName: r.old, fp: "batch-" + r.old,
+                    });
+                });
+                markDirty();
+
+                const totalOld = ok.reduce((s, r) => s + r.oldSize, 0);
+                const totalNew = ok.reduce((s, r) => s + r.newSize, 0);
+                const saved = totalOld ? Math.round((1 - totalNew / totalOld) * 100) : 0;
+
+                box.innerHTML = `<div style="margin-top:10px">
+                    <div class="tip" style="color:var(--green);margin-bottom:8px">
+                        ✓ 转换 ${ok.length} 张：${fmtSize(totalOld)} → ${fmtSize(totalNew)}（省 ${saved}%）</div>
+                    ${ok.map(r => `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:.78rem">
+                        <code style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(r.old)} → ${esc(r.new)}</code>
+                        <span style="color:var(--faint)">${fmtSize(r.oldSize)} → ${fmtSize(r.newSize)}</span>
+                    </div>`).join("")}
+                    ${failed.length ? `<div class="tip" style="color:var(--red);margin-top:8px">
+                        ${failed.length} 张失败：${esc(failed.map(f => f.old).join(", "))}</div>` : ""}
+                    <div class="tip" style="margin-top:8px">
+                        引用路径已自动更新（替换 ${replaced} 处）。点「保存到本地」写盘，
+                        旧文件留在磁盘上，确认无误后可以手动删。</div>
+                </div>`;
+            } catch (e) {
+                box.innerHTML = `<div class="tip" style="color:var(--red)">转换失败：${esc(e.message)}</div>`;
+            }
+        });
+
+        $("#btnScanOrphan").addEventListener("click", async () => {
+            const box = $("#orphanBox");
+            box.innerHTML = `<div class="tip">扫描中…</div>`;
+            try {
+                // 1. 列出 img/ 下的文件
+                const res = await fetch("img/");
+                const html = await res.text();
+                const names = [...html.matchAll(/href="([^"]+\.(?:webp|jpg|jpeg|png|gif))"/gi)]
+                    .map(m => decodeURIComponent(m[1].split("/").pop()))
+                    .filter(Boolean);
+
+                // 2. 收集所有引用来源：data.js + css + html
+                const refs = new Set(used);
+                for (const path of ["js/data.js", "css/style.css", "index.html", "css/admin.css"]) {
+                    try {
+                        const r = await fetch(path + "?t=" + Date.now());
+                        if (!r.ok) continue;
+                        const t = await r.text();
+                        [...t.matchAll(/img\/([A-Za-z0-9._-]+\.(?:webp|jpg|jpeg|png|gif))/gi)]
+                            .forEach(m => refs.add(m[1]));
+                    } catch (e) { /* 忽略单个文件读取失败 */ }
+                }
+
+                const orphans = names.filter(n => !refs.has(n));
+
+                if (!orphans.length) {
+                    box.innerHTML = `<div class="tip" style="color:var(--green)">
+                        ✓ 没有孤儿文件，img/ 目录里的 ${names.length} 个文件都有引用</div>`;
+                } else {
+                    box.innerHTML = `<div style="margin-top:10px">
+                        <div class="tip" style="color:var(--yellow);margin-bottom:8px">
+                            发现 ${orphans.length} 个未被引用的文件（已排除 data.js / css / html 里的引用）：</div>
+                        ${orphans.map(n => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.8rem">
+                            <code style="flex:1;overflow:hidden;text-overflow:ellipsis">${esc(n)}</code>
+                        </div>`).join("")}
+                        <div class="tip" style="margin-top:8px">
+                            这些文件在网站上不会被显示。确认无用后可以手动删掉 img/ 目录里的对应文件。</div>
+                    </div>`;
+                }
+            } catch (e) {
+                box.innerHTML = `<div class="tip" style="color:var(--red)">
+                    扫描失败：${esc(e.message)}<br>
+                    需要通过本地服务器访问（直接打开 admin.html 不行）</div>`;
+            }
+        });
+    }
+    /* ============================================================
+       通用弹窗
+       ============================================================ */
+    function showModal(title, bodyHtml, buttons) {
+        const m = $("#modal");
+        $("#modalTitle").textContent = title;
+        $("#modalBody").innerHTML = bodyHtml;
+        const foot = $("#modalFoot");
+        foot.innerHTML = (buttons || [{ label: "关闭", primary: true }]).map(b =>
+            `<button class="btn ${b.primary ? "" : "ghost"}" data-mb="${esc(b.label)}">${esc(b.label)}</button>`
+        ).join("");
+        $$("[data-mb]", foot).forEach(btn => btn.addEventListener("click", () => {
+            m.classList.remove("show");
+            const cfg = (buttons || []).find(b => b.label === btn.dataset.mb);
+            if (cfg && cfg.onClick) cfg.onClick();
+        }));
+        m.classList.add("show");
+    }
+
+    /* ============================================================
+       八、发布设置
        ============================================================ */
     function renderPublish(main) {
         main.innerHTML = `<div class="sec-head">
@@ -863,8 +1398,10 @@ window.SITE_DATA = `;
             const baseTree = baseCommitInfo.tree.sha;
 
             // 2. 建 blob：data.js
+            // GitHub 的 git blob API 只支持 base64 编码，统一走 base64
             const dataText = serialize();
-            const dataBlob = await createBlob(H, owner, repo, dataText, "utf-8");
+            const dataB64 = await textToBase64(dataText);
+            const dataBlob = await createBlob(H, owner, repo, dataB64, "base64");
             const treeItems = [
                 { path: DATA_FILE, mode: "100644", type: "blob", sha: dataBlob.sha },
             ];
@@ -904,6 +1441,17 @@ window.SITE_DATA = `;
             fr.onerror = () => reject(new Error("图片编码失败"));
             fr.readAsDataURL(blob);
         });
+    }
+
+    /* 文本转 base64（要处理 UTF-8 中文，不能用 btoa 直接转） */
+    function textToBase64(text) {
+        const bytes = new TextEncoder().encode(text);
+        let bin = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+            bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+        }
+        return btoa(bin);
     }
 
     async function createBlob(H, owner, repo, text, encoding) {
@@ -957,15 +1505,28 @@ window.SITE_DATA = `;
     window.Rin9Admin = {
         get data() { return S.data; },
         get dirty() { return S.dirty; },
+        get newImages() { return S.newImages; },
         set allowNav(v) { S.allowNav = !!v; },
         serialize,
         nextName,
         compressImage,
         saveLocal,
         publish,
+        resolveDropTarget,
+        applyDrop,
+        fingerprint,
+        setCompress: (s) => {
+            if (s === null) {
+                S.compress = loadCompressSettings();
+            } else {
+                saveCompressSettings(Object.assign({}, S.compress || DEFAULT_COMPRESS, s));
+            }
+        },
+        get compress() { return S.compress; },
     };
 
     async function init() {
+        S.compress = loadCompressSettings();
         try {
             await loadData();
         } catch (e) {
@@ -985,6 +1546,15 @@ window.SITE_DATA = `;
         $("#btnRefresh").addEventListener("click", refreshPreview);
         $("#btnPreview").addEventListener("click", () => window.open("index.html", "_blank"));
 
+        // 弹窗关闭
+        $("#modalClose")?.addEventListener("click", () => $("#modal").classList.remove("show"));
+        $("#modal")?.addEventListener("click", (e) => {
+            if (e.target.id === "modal") $("#modal").classList.remove("show");
+        });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") $("#modal")?.classList.remove("show");
+        });
+
         $("#btnTogglePreview").addEventListener("click", () => {
             $("#previewPane").classList.toggle("collapsed");
         });
@@ -1002,40 +1572,113 @@ window.SITE_DATA = `;
             $("#btnTheme").textContent = th === "light" ? "🌙" : "☀️";
         }
 
-        // 全局拖拽 → 自动挂到照片墙
+        // ============ 全局拖放路由 ============
         const ov = $("#dropOverlay");
+        const dzTitle = ov.querySelector(".dz-title");
+        const dzSub = ov.querySelector(".dz-sub");
+        const dzTarget = ov.querySelector(".dz-target");
+        const dzBox = ov.querySelector(".dropzone-box");
         let dragDepth = 0;
+        let currentTarget = null;
+        let lastHl = null;
+
+        const clearHighlight = () => {
+            if (lastHl) {
+                lastHl.classList.remove("drop-target-hl");
+                lastHl.classList.remove("drag-hover");
+            }
+            lastHl = null;
+        };
+
+        const setTarget = (t) => {
+            currentTarget = t;
+            if (t) {
+                dzTarget.textContent = "→ " + t.label;
+                dzBox.classList.add("targeted");
+                clearHighlight();
+                if (t.el) {
+                    lastHl = t.el;
+                    lastHl.classList.add(t.el.classList.contains("item") ? "drag-hover" : "drop-target-hl");
+                }
+            } else {
+                dzTarget.textContent = "";
+                dzBox.classList.remove("targeted");
+                clearHighlight();
+            }
+        };
+
+        // 判断这次拖拽是不是带文件的（CDP 模拟时 dataTransfer.types 可能为空，
+        // 所以只要有 drag 事件就先显示，落点提示照样给）
+        const hasFiles = (e) => {
+            const dt = e.dataTransfer;
+            if (!dt) return true;
+            const types = Array.from(dt.types || []);
+            if (!types.length) return true;
+            return types.includes("Files");
+        };
+
         window.addEventListener("dragenter", (e) => {
-            if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes("Files")) return;
+            if (!hasFiles(e)) return;
             dragDepth++;
             ov.classList.add("show");
+            dzTitle.textContent = "松手就加进来";
+            dzSub.textContent = "移动鼠标决定图片放在哪";
         });
-        window.addEventListener("dragover", (e) => e.preventDefault());
+
+        window.addEventListener("dragover", (e) => {
+            if (!hasFiles(e)) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+            // overlay 是 pointer-events:none，不会挡鼠标，所以能实时算准落点
+            const t = resolveDropTarget(e.clientX, e.clientY);
+            setTarget(t);
+        });
+
         window.addEventListener("dragleave", () => {
             dragDepth = Math.max(0, dragDepth - 1);
-            if (!dragDepth) ov.classList.remove("show");
+            if (!dragDepth) {
+                ov.classList.remove("show");
+                setTarget(null);
+            }
         });
+
         window.addEventListener("drop", async (e) => {
+            if (!e.dataTransfer || !e.dataTransfer.files ||
+                !e.dataTransfer.files.length) {
+                // 没有真实文件（比如拖的是文字），直接忽略
+                dragDepth = 0;
+                ov.classList.remove("show");
+                setTarget(null);
+                return;
+            }
             e.preventDefault();
+            e.stopPropagation();
             dragDepth = 0;
             ov.classList.remove("show");
-            // 如果是在某个具体条目的投放区里，交给条目的 handler 处理
-            if (e.target.closest("[data-drop]")) return;
+
+            // 落点优先用 drop 事件发生时的实时计算结果
+            const t = resolveDropTarget(e.clientX, e.clientY) || currentTarget;
+            setTarget(null);
+            if (!t) return;
 
             const before = S.newImages.length;
             await handleFiles(e.dataTransfer.files);
             const added = S.newImages.slice(before);
             if (!added.length) return;
 
-            // 落到照片墙，每张图一条
-            added.forEach(im => {
-                S.data.gallery.push({ src: IMG_DIR + im.name, caption: "" });
-            });
+            applyDrop(t, added);
             markDirty();
-            S.section = "gallery";
-            renderSide();
+
+            // 落点变了要切到对应板块
+            if (t.section) {
+                S.section = t.section;
+                renderSide();
+            } else if (t.kind) {
+                S.section = t.kind;
+                renderSide();
+            }
             render();
-            toast(`已加入照片墙 ${added.length} 张`, "ok");
+            toast(`已${t.label}：${added.length} 张`, "ok");
         });
 
         // 离开前提醒（只在真正关闭/刷新页面时提示，不拦程序内跳转）

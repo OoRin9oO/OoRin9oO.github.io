@@ -292,19 +292,52 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; colo
 .dropzone-overlay {
     position: fixed; inset: 0; z-index: 200;
     display: none; place-items: center;
-    background: rgba(20, 18, 31, 0.88);
-    backdrop-filter: blur(6px);
+    background: rgba(20, 18, 31, 0.82);
+    backdrop-filter: blur(5px);
+    /* 关键：不能让遮罩挡住鼠标，否则 elementFromPoint 拿不到真实落点 */
+    pointer-events: none;
 }
 .dropzone-overlay.show { display: grid; }
 .dropzone-box {
     border: 3px dashed var(--accent);
     border-radius: 20px;
-    padding: 46px 70px;
+    padding: 40px 64px;
     text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
 }
-.dz-icon { font-size: 3rem; }
-.dz-title { font-size: 1.3rem; font-weight: 700; margin: 10px 0 6px; }
+.dropzone-box.targeted {
+    border-color: var(--green);
+    transform: scale(1.03);
+}
+.dz-icon { font-size: 2.6rem; }
+.dz-title { font-size: 1.25rem; font-weight: 700; margin: 10px 0 6px; }
 .dz-sub { color: var(--dim); font-size: 0.9rem; }
+.dz-target {
+    margin-top: 12px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: rgba(95, 211, 154, 0.16);
+    border: 1px solid rgba(95, 211, 154, 0.45);
+    color: var(--green);
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-block;
+}
+.dz-target:empty { display: none; }
+
+/* 拖拽时高亮目标元素 */
+.drop-target-hl {
+    outline: 2px dashed var(--green) !important;
+    outline-offset: 3px;
+    background: rgba(95, 211, 154, 0.08) !important;
+    border-radius: var(--radius-sm);
+}
+
+/* 拖拽时给条目卡片加高亮 */
+.item.drag-hover {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(95, 211, 154, 0.18);
+}
 
 /* ---------- 模态框 ---------- */
 .modal {
