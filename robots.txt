@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# 编辑器不需要被搜索引擎收录
+Disallow: /admin.html
+Disallow: /tools/

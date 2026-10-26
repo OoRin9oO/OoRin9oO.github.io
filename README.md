@@ -4,89 +4,85 @@
 
 ---
 
+## 🚀 最快的编辑方式：可视化编辑器
+
+**双击 `start-editor.bat`**（或 `启动编辑器.bat`），浏览器会自动打开编辑器。
+
+左边选板块，中间填内容，**右边实时预览**。改完点「保存到本地」写回文件，
+再点「保存并发布」直接推到 GitHub，Pages 一分钟内自动上线。
+
+### 编辑器能做什么
+
+| 操作 | 怎么做 |
+|---|---|
+| 改文字 | 中间表单直接改，右侧实时更新 |
+| 加一条内容 | 右上角「＋ 新增一条」 |
+| 加标签 | 输入框里敲一下回车，标签会变成可删除的小圆片 |
+| 加图片 | **把图拖进虚线框**，自动压缩成 webp 并按「字母-日期-字母」命名 |
+| 换封面 | 作品集的「封面图」字段拖图进去 |
+| 换头像/简介/音乐 | 侧栏「⚙️ 基本资料」 |
+| 删除 | 每条右侧的 🗑 按钮 |
+
+### 两个保存按钮的区别
+
+- **💾 保存到本地** —— 写回你硬盘上的 `js/data.js` 和 `img/` 图片。
+  第一次点会让你选一次文件夹（选网站根目录 `OoRin9oO.github.io`），之后浏览器记住。
+  需要用 **Edge 或 Chrome**（Firefox 不支持直接写文件）。
+- **🚀 保存并发布** —— 直接提交到 GitHub 并推送，线上自动更新，不用开终端敲 git。
+
+### 首次使用「保存并发布」要先填令牌
+
+侧栏「🚀 发布设置」→ 填 Personal Access Token：
+
+1. GitHub → 右上角头像 → Settings
+2. 左侧最下面 → Developer settings
+3. Personal access tokens → Tokens (classic) → Generate new token
+4. 勾选 `repo`（公开仓库勾 `public_repo` 就够），设个有效期
+5. 复制那串 `github_pat_...` 粘进去，点「🔌 测试连接」验证
+
+令牌只存在你本机浏览器的 localStorage，不会传到任何第三方。
+
+---
+
 ## 目录结构
 
 ```
-├── index.html        页面结构
-├── css/style.css     全部样式
-├── js/data.js        ⭐ 网站内容
-├── js/main.js        交互逻辑
-├── img/              图片（自动压缩后的产物）
-├── music/            背景音乐
-├── inbox/            📥 内容投递箱 —— 以后内容丢这里
-└── tools/ingest.py   接料管线脚本
+├── admin.html         📝 可视化编辑器（编辑网站用这个）
+├── index.html         站点页面
+├── css/style.css      站点样式
+├── css/admin.css      编辑器样式
+├── js/data.js         ⭐ 站点内容（编辑器会自动维护这个文件）
+├── js/main.js         站点交互逻辑
+├── js/admin.js        编辑器逻辑
+├── img/               图片
+├── music/             背景音乐
+├── inbox/             📥 批量投递箱（给脚本用的老办法）
+├── tools/serve.py     本地服务器（启动器调它）
+├── tools/ingest.py    批量导入脚本
+├── start-editor.bat   🚀 双击这个打开编辑器
+└── robots.txt
 ```
 
 ---
 
-## 两种加内容的方式
+## 老的办法：批量投递（需要处理很多张图时更省事）
 
-### 方式一：丢进 inbox（推荐，省心）
-
-你只需要做三步：
-
-**1. 把图片丢进 `inbox/` 目录**（随便多少张）
-
-**2. 在 `inbox/manifest.json` 里写清楚这些图配什么文案**
-
-**3. 跑一条命令**
+图片丢进 `inbox/`，写 `inbox/manifest.json`，跑：
 
 ```bash
 python tools/ingest.py
 ```
 
-脚本会自动做完这些事：
+脚本自动压缩、规范命名、合并进 `js/data.js`、归档原图。
+参数：`--dry-run` 预览不落盘，`--no-img` 只导文案。
 
-- 把图片压缩成 webp（长边 1600px 内），体积通常降到原图的 1/10 甚至 1/50
-- 按「日期-用途-序号-标题」规范命名，存进 `img/`
-- 按 manifest 的说明合并进 `js/data.js`
-- 把处理过的原始文件归档到 `inbox/_archive/`，不会重复导入
-- 清空 manifest.json，可以直接写下一批
+单张图、少量改动，**直接用编辑器更快**，不用碰命令行。
 
-manifest.json 格式（用不到的键直接删掉）：
+---
 
-```json
-{
-  "notes": [
-    {
-      "date": "2026-11-01",
-      "title": "标题",
-      "desc": "正文，随便写",
-      "images": ["IMG:IMG_0001.jpg"]
-    }
-  ],
-  "works": [
-    {
-      "title": "作品名",
-      "desc": "说明",
-      "status": "wip",
-      "cover": "IMG:IMG_0002.jpg",
-      "tags": ["Python"],
-      "links": [{ "label": "源码", "url": "https://..." }]
-    }
-  ],
-  "milestones": [
-    { "date": "2026-11-01", "title": "大事", "desc": "描述", "icon": "🎉" }
-  ],
-  "gallery": [
-    { "src": "IMG:IMG_0003.jpg", "caption": "照片说明" }
-  ]
-}
-```
+## 怎么加内容（手动改 data.js）
 
-`IMG:` 前缀表示"本次投递的图片"，脚本会替换成实际路径。
-同一张图可以在多处引用（notes + gallery），只会处理一次。
-
-其他参数：
-
-```bash
-python tools/ingest.py --dry-run   # 只看会做什么，不改文件
-python tools/ingest.py --no-img    # 只合并文案，不处理图片
-```
-
-### 方式二：直接改 `js/data.js`
-
-内容全是数据，改这个文件就行，不用碰 HTML。
+所有内容都是数据，改 `js/data.js` 就行，不用碰 HTML。
 
 **加一个作品** → 往 `works` 数组加：
 
@@ -164,6 +160,8 @@ python tools/ingest.py --no-img    # 只合并文案，不处理图片
 - 等比缩放只用于控制体积（长边上限 1600px），不改变宽高比
 - 灯箱里同样完整显示，不会裁掉上下或左右
 
+---
+
 ## 板块增删
 
 想加一个新板块（比如「技能」「友链」）：
@@ -181,17 +179,15 @@ python tools/ingest.py --no-img    # 只合并文案，不处理图片
 
 ## 主题
 
-右上角 ☀️ 按钮切换深色 / 浅色，选择会记在浏览器本地。
+右上角 ☀️ 按钮切换深色 / 浅色，选择会记在浏览器本地。编辑器右上角也有独立的切换。
 
 ## 本地预览
 
 ```bash
-python -m http.server 8080
+python tools/serve.py
 ```
 
-然后访问 http://localhost:8080
-
-（直接双击 `index.html` 也能看，但用本地服务器更接近线上效果。）
+或者直接双击 `start-editor.bat`（等价，且会自动开浏览器）。
 
 ## 部署
 
@@ -200,6 +196,7 @@ python -m http.server 8080
 ## 图片建议
 
 - 长边 1600px 以内最合适，再大徒增体积
-- webp 格式画质/体积比最优，脚本会自动转
+- webp 格式画质/体积比最优，编辑器会自动转
 - 带透明通道的 PNG 会保留为 PNG，不会被压成黑底 JPG
 - 单张图控制在 200KB 以内，页面滚动会更顺
+

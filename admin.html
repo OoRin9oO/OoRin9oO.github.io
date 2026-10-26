@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rin9 网站编辑器</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+    <!-- ============ 顶栏 ============ -->
+    <header class="top">
+        <div class="brand">
+            <span class="logo">🎐</span>
+            <div>
+                <div class="brand-name">Rin9 网站编辑器</div>
+                <div class="brand-sub" id="fileState">正在读取站点…</div>
+            </div>
+        </div>
+
+        <div class="top-actions">
+            <button class="btn ghost" id="btnPreview" title="在新窗口打开站点">◱ 预览站点</button>
+            <button class="btn ghost" id="btnSave" title="写回 js/data.js 和图片文件">💾 保存到本地</button>
+            <button class="btn" id="btnPublish" title="提交并推送到 GitHub，Pages 自动部署">🚀 保存并发布</button>
+            <button class="icon-btn" id="btnTheme" title="切换编辑器主题">☀️</button>
+        </div>
+    </header>
+
+    <div class="layout">
+
+        <!-- ============ 侧栏：板块 ============ -->
+        <aside class="side">
+            <div class="side-title">内容板块</div>
+            <nav class="side-nav" id="sideNav"></nav>
+
+            <div class="side-sep"></div>
+
+            <div class="side-title">站点设置</div>
+            <button class="side-item" data-act="settings">⚙️ 基本资料</button>
+            <button class="side-item" data-act="publish">🚀 发布设置</button>
+
+            <div class="side-foot">
+                <div class="hint" id="sideHint">
+                    改完点「保存到本地」写回文件，再点「保存并发布」推上线。
+                </div>
+            </div>
+        </aside>
+
+        <!-- ============ 主区：表单 ============ -->
+        <main class="main" id="main">
+            <div class="loading">正在读取 js/data.js …</div>
+        </main>
+
+        <!-- ============ 右栏：实时预览 ============ -->
+        <aside class="preview" id="previewPane">
+            <div class="preview-head">
+                <span>实时预览</span>
+                <button class="icon-btn sm" id="btnRefresh" title="刷新预览">⟳</button>
+                <button class="icon-btn sm" id="btnTogglePreview" title="折叠/展开">›</button>
+            </div>
+            <iframe id="previewFrame" title="站点预览"></iframe>
+        </aside>
+
+    </div>
+
+    <!-- ============ 图片投放区（拖拽时全屏高亮）============ -->
+    <div class="dropzone-overlay" id="dropOverlay">
+        <div class="dropzone-box">
+            <div class="dz-icon">🖼️</div>
+            <div class="dz-title">松手就加进来</div>
+            <div class="dz-sub">自动压缩成 webp，按「字母-日期-字母」命名</div>
+        </div>
+    </div>
+
+    <!-- ============ 模态框 ============ -->
+    <div class="modal" id="modal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <span id="modalTitle">标题</span>
+                <button class="icon-btn sm" id="modalClose">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-foot" id="modalFoot"></div>
+        </div>
+    </div>
+
+    <!-- ============ 提示条 ============ -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
