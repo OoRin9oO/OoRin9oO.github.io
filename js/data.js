@@ -44,10 +44,17 @@ window.SITE_DATA = {
     music: {
         tracks: [
             {
-                id: "t1",
-                title: "默认背景音乐",
-                artist: "合成音",
-                src: "music/bgm.wav",
+                id: "t-mvpa3np9-1",
+                title: "Departures 〜あなたにおくるアイの歌〜（Acoustic Ver.） (from BE",
+                artist: "",
+                src: "music/Departures-歌-Acoustic-Ver-from-BE-20261026.mp3",
+                cover: ""
+            },
+            {
+                id: "t-mvpa5ntx-2",
+                title: "速攻归宅",
+                artist: "【Amour 】Étoile",
+                src: "music/速攻归宅---Amour-toile-20261026.mp3",
                 cover: ""
             }
         ],
@@ -56,7 +63,7 @@ window.SITE_DATA = {
                 id: "p1",
                 name: "默认列表",
                 desc: "开站即听的那些",
-                tracks: ["t1"]
+                tracks: ["t-mvpa3np9-1", "t-mvpa5ntx-2"]
             }
         ],
         recommend: [
@@ -81,12 +88,17 @@ window.SITE_DATA = {
     }  /* 基本资料 */,
     links: [
         {
+            icon: "🎵❤️",
+            name: "我的网易云主页",
+            url: "https://music.163.com/#/user/home?id=3273844574"
+        },
+        {
             icon: "📺",
             name: "我的bilibili主页",
             url: "https://space.bilibili.com/501867168?spm_id_from=333.1007.0.0"
         },
         {
-            icon: "🎵",
+            icon: "🎶",
             name: "我的抖音主页",
             url: "https://www.douyin.com/user/self?from_tab_name=Rin9"
         },
@@ -118,7 +130,7 @@ window.SITE_DATA = {
     ]  /* 成长里程碑（按时间倒序，最新的放最前） */,
     works: [
         {
-            title: "爱依计划",
+            title: "关于本网站",
             desc: "纯静态的个人主页，记录日常与作品。GitHub Pages 托管，没有后端，加内容只改一个数据文件。",
             status: "wip",
             cover: "img/a-20261025-a.webp",
@@ -134,20 +146,22 @@ window.SITE_DATA = {
             title: "爱依计划",
             desc: "这是一个用来约束我自己和AI灵魂的项目，通过不断提升自我与完善AI对我的印象来得到一个对自我的更加深刻的认识。",
             status: "wip",
-            tags: ["AI", "自我"]
+            tags: ["AI", "自我"],
+            cover: "img/o-20261026-o.webp"
         },
         {
             title: "一个病娇小游戏",
             desc: "这是一个即兴开发的小游戏，目标是不断提升运用电脑软件工具的能力，达到人与AI一起发展的美好愿景",
             status: "wip",
             tags: ["游戏", "AI"],
-            cover: ""
+            cover: "img/n-20261026-n.webp"
         },
         {
             title: "被伪装修女的创世神养大了！",
             desc: "这是一本我写的原创内容的小说，有兴趣的时候才会更新，目前已经累计写了5w字，可在番茄上直接搜索观看。",
             status: "wip",
-            tags: ["小说", "轻小说"]
+            tags: ["小说", "轻小说"],
+            cover: "img/p-20261026-p.webp"
         },
         {
             title: "Github娘-project！",
