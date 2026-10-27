@@ -195,6 +195,12 @@ window.SITE_DATA = {
     ]  /* 作品集（status: done 完成 / wip 进行中 / plan 规划中） */,
     notes: [
         {
+            date: "2026-10-27",
+            title: "关于Github娘-project",
+            desc: "今天用的是简单的生成图片方式为GitHub娘生成了Q版像素风格的图像，并目标制作一段子供向的AI视频（现在已经完成了36秒），目标是为了让GitHub娘（mino）成为网络偶像！",
+            images: ["img/t-20261027-t.webp"]
+        },
+        {
             date: "2026-10-26",
             title: "开始正式整理日子",
             desc: "昨天晚上和今天想了太多的事情，于是我下定了决心，将日常的重大事件以及做了什么都放到这个日常记录板块来。\n有可能是我的抱怨，也有可能是我的喜悦。\n报告今天做到的事情：为网站做了个可直接编辑的项目，为病娇小游戏添加了循声系统，更又创建了一个新的oc角色",
@@ -218,6 +224,14 @@ window.SITE_DATA = {
         }
     ]  /* 日常记录（images 配图可点击放大） */,
     gallery: [
+        {
+            src: "img/v-20261027-v.webp",
+            caption: "嘿咻嘿咻搬东西~"
+        },
+        {
+            src: "img/u-20261027-u.webp",
+            caption: "哎呀！？"
+        },
         {
             src: "img/s-20261026-s.webp",
             caption: "我……我也要比心吗"
