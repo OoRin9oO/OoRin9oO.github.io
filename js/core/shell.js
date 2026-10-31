@@ -208,8 +208,19 @@
     /* ============================================================
        五、主题加载
        ============================================================ */
-    function loadCSS(href, attr) {
+    /* 资源加载统一加超时：网络卡住时不能把界面吊死 */
+    const LOAD_TIMEOUT = 9000;
+
+    function withTimeout(promise, ms, label) {
         return new Promise((resolve, reject) => {
+            const t = setTimeout(() => reject(new Error(label + " 超时")), ms);
+            promise.then(v => { clearTimeout(t); resolve(v); },
+                         e => { clearTimeout(t); reject(e); });
+        });
+    }
+
+    function loadCSS(href, attr) {
+        const p = new Promise((resolve, reject) => {
             const l = document.createElement("link");
             l.rel = "stylesheet";
             l.href = href;
@@ -218,16 +229,18 @@
             l.onerror = () => reject(new Error("样式加载失败：" + href));
             document.head.appendChild(l);
         });
+        return withTimeout(p, LOAD_TIMEOUT, "样式 " + href);
     }
 
     function loadJS(src) {
-        return new Promise((resolve, reject) => {
+        const p = new Promise((resolve, reject) => {
             const s = document.createElement("script");
             s.src = src;
             s.onload = () => resolve(s);
             s.onerror = () => reject(new Error("脚本加载失败：" + src));
             document.body.appendChild(s);
         });
+        return withTimeout(p, LOAD_TIMEOUT, "脚本 " + src);
     }
 
     async function setSkin(id, opts) {
@@ -238,89 +251,125 @@
             return;
         }
         if (state.loading) return;
+
         // 已经是这个主题：也要把"记住"这件事做掉，否则点当前项不会保存选择
         if (state.skin === id && state.instance) {
             if (opts.remember) localStorage.setItem(LS_SKIN, id);
+            syncSkinMenu();
             return;
         }
 
         state.loading = true;
         const root = $("#app");
-        document.documentElement.setAttribute("data-skin", id);
 
-        // 切换时的淡出
-        if (root && state.skin) {
-            root.classList.add("skin-leaving");
-            await new Promise(r => setTimeout(r, 180));
-        }
-
-        // 卸载旧主题
         try {
-            if (state.instance && typeof state.instance.unmount === "function") {
-                state.instance.unmount();
-            }
-        } catch (e) { console.warn(e); }
-        state.instance = null;
+            // 1. 先把新主题的样式与脚本准备好 —— 成功了才动现有页面。
+            //    否则网络一卡用户就会看到白屏，而且回不来。
+            const prevCss = $$("link[data-skin-css]");
 
-        // 换样式
-        $$("link[data-skin-css]").forEach(l => l.remove());
-        try {
-            await loadCSS(def.css, "data-skin-css");
-        } catch (e) {
-            console.warn(e.message);
-        }
-
-        // 确保主题脚本已注册
-        if (!window.RinThemes || !window.RinThemes.get(id)) {
+            let cssLoaded = null;
             try {
-                await loadJS(def.js);
+                cssLoaded = await loadCSS(def.css, "data-skin-css");
+                // 新的到位了再撤旧的，避免中间出现无样式闪烁
+                prevCss.forEach(l => l.remove());
             } catch (e) {
                 console.warn(e.message);
+                // 样式没下来就放弃，保持原样
+                if (cssLoaded) cssLoaded.remove();
+                state.loading = false;
+                if (state.skin) return;
+                // 首次加载没有旧主题可留，只能继续
             }
-        }
 
-        // 挂载
-        const theme = window.RinThemes && window.RinThemes.get(id);
-        if (!theme) {
-            console.error("主题脚本未注册：" + id);
+            if (!window.RinThemes || !window.RinThemes.get(id)) {
+                try {
+                    await loadJS(def.js);
+                } catch (e) {
+                    console.warn(e.message);
+                }
+            }
+
+            const theme = window.RinThemes && window.RinThemes.get(id);
+            if (!theme) {
+                console.error("主题脚本未注册：" + id);
+                // 有旧主题就留着，别把页面搞空
+                if (state.skin) {
+                    try { await loadCSS(THEMES[state.skin].css, "data-skin-css"); } catch (e) { /* ignore */ }
+                    toastMsg("界面加载失败，已保持原样");
+                    return;
+                }
+                if (root) root.innerHTML = `<div style="padding:60px 20px;text-align:center;color:#a8a2c4">
+                    界面加载失败，请刷新重试</div>`;
+                return;
+            }
+
+            // 2. 淡出旧主题
+            if (root && state.skin) {
+                root.classList.add("skin-leaving");
+                await new Promise(r => setTimeout(r, 180));
+            }
+
+            // 3. 卸载旧的
+            try {
+                if (state.instance && typeof state.instance.unmount === "function") {
+                    state.instance.unmount();
+                }
+            } catch (e) { console.warn(e); }
+            state.instance = null;
+
+            // 4. 挂载新的
+            if (root) {
+                root.innerHTML = "";
+                root.classList.remove("skin-leaving");
+            }
+            document.documentElement.setAttribute("data-skin", id);
+            try {
+                state.instance = theme.mount(root, {
+                    data: getData(),
+                    esc, $, $$,
+                    openLightbox,
+                    applyLayout,
+                    applySectionTitles,
+                    onReveal: setupReveal,
+                }) || {};
+            } catch (e) {
+                console.error("主题挂载失败：", e);
+            }
+
+            state.skin = id;
+            if (root) {
+                root.classList.add("skin-entering");
+                setTimeout(() => root && root.classList.remove("skin-entering"), 600);
+            }
+
+            // 5. 通用后处理
+            applyLayout();
+            applySectionTitles();
+            setupReveal();
+            syncSkinMenu();
+
+            if (opts.remember) localStorage.setItem(LS_SKIN, id);
+        } finally {
             state.loading = false;
-            return;
         }
+    }
 
-        if (root) {
-            root.innerHTML = "";
-            root.classList.remove("skin-leaving");
+    /* 轻量提示（不依赖编辑器） */
+    function toastMsg(text) {
+        let t = document.getElementById("__siteToast");
+        if (!t) {
+            t = document.createElement("div");
+            t.id = "__siteToast";
+            t.style.cssText = "position:fixed;left:50%;bottom:28px;transform:translateX(-50%);" +
+                "z-index:9999;padding:10px 18px;border-radius:999px;font-size:13px;" +
+                "background:rgba(20,18,31,.94);color:#ece9f7;border:1px solid rgba(255,255,255,.14);" +
+                "box-shadow:0 10px 30px rgba(0,0,0,.4);transition:opacity .3s;";
+            document.body.appendChild(t);
         }
-        try {
-            state.instance = theme.mount(root, {
-                data: getData(),
-                esc,
-                $,
-                $$,
-                openLightbox,
-                applyLayout,
-                applySectionTitles,
-                onReveal: setupReveal,
-            }) || {};
-        } catch (e) {
-            console.error("主题挂载失败：", e);
-        }
-
-        state.skin = id;
-        document.documentElement.setAttribute("data-skin", id);
-        if (root) root.classList.add("skin-entering");
-        setTimeout(() => root && root.classList.remove("skin-entering"), 600);
-
-        // 通用后处理
-        applyLayout();
-        applySectionTitles();
-        setupReveal();
-        syncSkinMenu();
-
-        if (opts.remember) {
-            localStorage.setItem(LS_SKIN, id);
-        }
-        state.loading = false;
+        t.textContent = text;
+        t.style.opacity = "1";
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => { t.style.opacity = "0"; }, 2600);
     }
 
     /* ============================================================
