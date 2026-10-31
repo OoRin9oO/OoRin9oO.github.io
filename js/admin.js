@@ -1131,6 +1131,7 @@ window.SITE_DATA = `;
     const SKINS = [
         { id: "classic", icon: "▦", name: "经典", desc: "干净、安静、看得清" },
         { id: "motion", icon: "≈", name: "流动", desc: "会动的排版，滚动有层次" },
+        { id: "galaxy", icon: "✦", name: "星图", desc: "把项目摆成星系，转着看" },
     ];
 
     const FONT_OPTS = [

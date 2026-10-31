@@ -31,6 +31,13 @@
             css: "css/themes/motion.css",
             js: "js/themes/motion.js",
         },
+        galaxy: {
+            name: "星图",
+            icon: "✦",
+            desc: "把项目摆成星系，转着看",
+            css: "css/themes/galaxy.css",
+            js: "js/themes/galaxy.js",
+        },
     };
 
     const LS_SKIN = "rin9-skin";
