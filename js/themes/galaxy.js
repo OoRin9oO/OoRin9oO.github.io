@@ -222,6 +222,8 @@
                 updateCamera(1);
 
                 loading.classList.add("gone");
+                // 淡出结束后直接移除，避免文字残留在星星上
+                setTimeout(() => { if (loading.parentNode) loading.remove(); }, 700);
                 setTimeout(() => { if (hint) hint.classList.add("fade"); }, 6500);
 
                 animate();
