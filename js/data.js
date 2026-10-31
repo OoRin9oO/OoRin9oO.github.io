@@ -19,22 +19,17 @@ window.SITE_DATA = {
         pinned: [],
         hidden: []
     }  /* 页面布局（板块顺序 / 钉住 / 隐藏） */,
-    /* 外观：整站视觉基调，所有主题共享
-       skin 默认界面（classic 经典 / motion 流动）  mode 默认深浅色
-       accent 主色  accent2 辅色  radius 圆角(px)  maxw 内容栏宽(px)
-       blur 背景模糊(px)  font 字体（system/serif/rounded/mono）
-       density 疏密（compact / normal / loose） */
     appearance: {
-        skin: "classic",
+        skin: "motion",
         mode: "dark",
-        accent: "#a78bfa",
-        accent2: "#6c63ff",
+        accent: "#9790ad",
+        accent2: "#9291ac",
         radius: 18,
         maxw: 920,
         blur: 14,
         font: "system",
         density: "normal"
-    },
+    }  /* 外观（界面风格 / 配色 / 圆角 / 栏宽 / 字体 / 疏密） */,
     sections: {
         links: {
             title: "✨ 常用链接",
