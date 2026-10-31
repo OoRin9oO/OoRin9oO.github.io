@@ -181,20 +181,53 @@
             </div>`;
 
         const btn = $("#skinBtn");
+        let openY = 0;
+
+        function openMenu() {
+            openY = window.scrollY || 0;
+            menu.classList.add("open");
+            btn && btn.setAttribute("aria-expanded", "true");
+        }
+
+        function closeMenu() {
+            if (!menu.classList.contains("open")) return;
+            menu.classList.remove("open");
+            btn && btn.setAttribute("aria-expanded", "false");
+        }
+
         btn?.addEventListener("click", (e) => {
             e.stopPropagation();
-            menu.classList.toggle("open");
+            if (menu.classList.contains("open")) closeMenu();
+            else openMenu();
         });
+
+        // 点空白处关闭
         document.addEventListener("click", (e) => {
             if (!menu.contains(e.target) && e.target !== btn && !btn?.contains(e.target)) {
-                menu.classList.remove("open");
+                closeMenu();
             }
         });
+
+        // 滚动就关闭：菜单固定在视口上，页面一动它就该收起来，
+        // 否则会一直浮在内容上面挡住视线
+        window.addEventListener("scroll", () => {
+            if (!menu.classList.contains("open")) return;
+            // 留 10px 容差，避免触控板轻微抖动就关掉
+            if (Math.abs((window.scrollY || 0) - openY) > 10) closeMenu();
+        }, { passive: true });
+
+        // 按 Esc 关闭
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeMenu();
+        });
+
+        // 窗口尺寸变化时重新对齐（菜单宽度依赖视口）
+        window.addEventListener("resize", closeMenu, { passive: true });
 
         menu.addEventListener("click", (e) => {
             const b = e.target.closest("[data-skin-id]");
             if (!b) return;
-            menu.classList.remove("open");
+            closeMenu();
             setSkin(b.dataset.skinId, { remember: true });
         });
     }

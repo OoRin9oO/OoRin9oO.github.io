@@ -123,6 +123,7 @@
         $("#fileState").style.color = "var(--yellow)";
         // 自动记入历史（快照的是"改动后"的状态，撤销时回到上一个）
         pushHistory();
+        schedulePreviewSync();
     }
 
     /* 输入类改动用这个：连续输入合并成一步历史 */
@@ -132,6 +133,27 @@
         $("#fileState").style.color = "var(--yellow)";
         clearTimeout(S._histTimer);
         S._histTimer = setTimeout(pushHistory, 700);
+        schedulePreviewSync();
+    }
+
+    /* ============================================================
+       预览实时同步
+       —— 改内容立刻反映到右侧预览，且对所有界面生效
+       （预览里换界面后也继续同步，因为数据源始终是 S.data）
+       ============================================================ */
+    function schedulePreviewSync() {
+        clearTimeout(S._pvTimer);
+        S._pvTimer = setTimeout(syncPreviewNow, 320);
+    }
+
+    function syncPreviewNow() {
+        const w = $("#previewFrame")?.contentWindow;
+        if (!w || !w.RinSite) return;
+        try {
+            // 把编辑器里的最新数据交给预览，再让它按当前界面重绘
+            w.SITE_DATA = JSON.parse(JSON.stringify(stripInternal(S.data)));
+            w.RinSite.rerender();
+        } catch (e) { /* 预览没准备好就算了，下次再同步 */ }
     }
 
     function markClean(txt) {
@@ -2671,12 +2693,29 @@ window.SITE_DATA = `;
                 w.localStorage.setItem("rin9-mode", a.mode || "dark");
                 w.document.documentElement.setAttribute("data-theme", a.mode || "dark");
                 w.RinSite.applyAppearance();
-                w.RinSite.setSkin(a.skin || "classic");
             } else if (typeof w.__rerender === "function") {
                 w.__rerender();
             }
         } catch (e) { /* ignore */ }
         setTimeout(() => { pushLayoutToFrame(); pushAppearance(); }, 700);
+        enforcePreviewSkin(appearance().skin || "classic");
+    }
+
+    /* 强制预览显示指定界面。
+       shell 首次加载主题时会锁住 loading，这时候调 setSkin 会被忽略，
+       所以要重试几次直到对齐 */
+    function enforcePreviewSkin(want, tries) {
+        tries = tries || 0;
+        const w = $("#previewFrame")?.contentWindow;
+        if (!w || !w.RinSite) {
+            if (tries < 8) setTimeout(() => enforcePreviewSkin(want, tries + 1), 400);
+            return;
+        }
+        if (w.RinSite.skin === want) return;
+        try {
+            w.RinSite.setSkin(want);
+        } catch (e) { /* ignore */ }
+        if (tries < 8) setTimeout(() => enforcePreviewSkin(want, tries + 1), 450);
     }
 
     /* ============================================================

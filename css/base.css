@@ -616,11 +616,14 @@ body.music-page { background-attachment: fixed; }
    界面切换（shell 层）
    ============================================================ */
 .skin-menu {
-    position: absolute;
-    top: 62px;
+    /* fixed 而不是 absolute：菜单要贴着粘性导航栏，页面滚动时不能跟着跑 */
+    position: fixed;
+    top: 64px;
     right: max(16px, calc((100vw - var(--maxw)) / 2 + 8px));
     z-index: 120;
     width: 268px;
+    max-height: calc(100vh - 84px);
+    overflow-y: auto;
     padding: 8px;
     border-radius: var(--radius);
     background: var(--bg-2);
