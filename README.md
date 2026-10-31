@@ -93,6 +93,80 @@
 音频文件**原样保存不压缩**（mp3/wav/ogg/m4a 都支持），
 「保存到本地」和「保存并发布」都会把音频一起写进 `music/` 目录。
 
+### 界面风格与外观（需求 4）
+
+**访客能自己切界面**：导航栏的 ◈ 按钮弹出选择面板，
+访客选过的会记在他自己的浏览器里，下次来还是那套。
+
+**你能设定默认界面**：侧栏「🎨 外观」→ 界面风格，
+这里选的是**访客第一次来看到哪套**（访客自己切过就听访客的）。
+
+**外观参数**（所有主题共享，改一处全站生效）：
+
+| 参数 | 范围 | 说明 |
+|---|---|---|
+| 主色 / 辅色 | 任意颜色 | 按钮、高亮、强调色 |
+| 圆角 | 0–32px | 卡片、按钮的圆润程度 |
+| 内容栏宽 | 720–1200px | 正文最大宽度 |
+| 背景模糊 | 0–30px | 毛玻璃强度 |
+| 字体 | 系统 / 衬线 / 圆润 / 等宽 | 全站字体 |
+| 疏密 | 紧凑 / 标准 / 宽松 | 板块间距节奏 |
+
+改动会在右侧预览里**立刻生效**，不用保存就能看到效果。
+
+### 主题是怎么工作的（以及怎么加 3D）
+
+站点被拆成两层：
+
+- **外壳**（`index.html` + `js/core/shell.js`）：导航、灯箱、音乐播放器、
+  界面切换、外观变量注入。**它不属于任何主题**，所以切主题时音乐不会断。
+- **主题**（`js/themes/*.js`）：只负责「把数据画成页面」。
+  每个主题实现一个 `mount(容器, 上下文)`，返回 `{ update, unmount }`。
+
+内容始终只有一份（`js/data.js`），所有主题读同一份数据。
+所以加内容仍然只加一次，换界面内容不会丢。
+
+**想加一个 3D 主题，只需要三步：**
+
+1. 建 `js/themes/spatial.js`，注册：
+
+```js
+window.RinThemes.register({
+    id: "spatial",
+    mount(root, ctx) {
+        // ctx.data 是全部内容，ctx.openLightbox 是灯箱
+        // 这里可以随便用 Three.js / Canvas
+        root.innerHTML = "...";
+        return {
+            update() { /* 数据变了重画 */ },
+            unmount() { /* 清理 WebGL 上下文、事件、动画 */ },
+        };
+    },
+});
+```
+
+2. 建 `css/themes/spatial.css`（只写这个主题专属的样式）
+
+3. 在 `js/core/shell.js` 的 `THEMES` 清单里加一行：
+
+```js
+spatial: {
+    name: "立体", icon: "◈", desc: "有深度的空间",
+    css: "css/themes/spatial.css",
+    js: "js/themes/spatial.js",
+},
+```
+
+编辑器「外观」面板会自动多出这张卡片。
+
+**3D 主题的实现建议**（避免踩坑）：
+
+- 用动态 `import()` 或按需加载 Three.js，别让 2D 访客也下载 WebGL 库
+- 必须在 `unmount()` 里调用 `renderer.dispose()`、
+  `geometry.dispose()`、`material.dispose()`，否则切换几次就爆显存
+- 移动端降低像素比（`renderer.setPixelRatio(Math.min(devicePixelRatio, 2))`）
+- 尊重 `prefers-reduced-motion`，给动效留开关
+
 ### 拖图放哪儿 —— 落点由鼠标位置决定
 
 拖动的时候屏幕上会实时显示 **「→ 设为封面」** 这样的提示，
@@ -168,30 +242,40 @@ classic token 则是 `repo`；只勾 read 会报 **403 权限不足**）。
 ## 目录结构
 
 ```
-├── admin.html         📝 可视化编辑器（编辑网站用这个）
-├── index.html         站点页面
-├── music.html         🎵 音乐推荐页（听更多我推荐的音乐）
-├── css/style.css      站点样式
-├── css/admin.css      编辑器样式
-├── js/data.js         ⭐ 站点内容（编辑器会自动维护这个文件）
-├── js/main.js         站点交互逻辑
-├── js/player.js       音乐播放器
-├── js/music-page.js   音乐页逻辑
-├── js/admin.js        编辑器逻辑
-├── js/layout-editor.js 布局编辑注入脚本（拖动板块用）
-├── img/               图片
-├── music/             音频文件
-├── inbox/             📥 批量投递箱（给脚本用的老办法）
-├── tools/serve.py     本地服务器（启动器调它）
-├── tools/ingest.py    批量导入脚本
-├── start-editor.bat   🚀 双击这个打开编辑器
+├── admin.html            📝 可视化编辑器（编辑网站用这个）
+├── index.html            🏠 站点外壳（只有导航和挂载点，内容由主题渲染）
+├── music.html            🎵 音乐推荐页
+├── css/
+│   ├── base.css          全局壳层：变量、导航、灯箱、播放器、界面菜单
+│   ├── admin.css         编辑器样式
+│   └── themes/
+│       ├── classic.css   经典主题样式
+│       └── motion.css    流动主题样式
+├── js/
+│   ├── data.js           ⭐ 站点内容（编辑器会自动维护这个文件）
+│   ├── core/
+│   │   ├── shell.js      外壳：主题加载切换、外观注入、导航、灯箱
+│   │   └── player.js     音乐播放器（切主题不断歌）
+│   ├── themes/
+│   │   ├── classic.js    经典主题渲染器
+│   │   └── motion.js     流动主题渲染器
+│   ├── admin.js          编辑器逻辑
+│   ├── layout-editor.js  布局编辑注入脚本（拖动板块用）
+│   └── music-page.js     音乐页逻辑
+├── img/                  图片
+├── music/                音频文件
+├── inbox/                📥 批量投递箱（给脚本用的老办法）
+├── tools/serve.py        本地服务器（启动器调它）
+├── tools/ingest.py       批量导入脚本
+├── start-editor.bat      🚀 双击这个打开编辑器
 └── robots.txt
 ```
 
-### data.js 的数据域
+### 数据域一览
 
 | 键 | 作用 |
 |---|---|
+| `appearance` | 界面风格 / 配色 / 圆角 / 栏宽 / 字体 / 疏密 |
 | `layout` | 板块顺序 / 钉住 / 隐藏 |
 | `sections` | 各板块的标题与副标题 |
 | `profile` | 名字、简介、头像、背景音乐、邮箱 |

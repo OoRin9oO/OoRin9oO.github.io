@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="dark" data-skin="classic">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,124 +7,45 @@
     <meta name="description" content="Rin9 的个人网站，记录日常与未来作品集。">
     <meta name="author" content="Rin9">
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/base.css">
     <link rel="icon" id="faviconLink" href="img/profile.jpg">
 </head>
 <body>
 
-    <!-- ============ 顶部导航 ============ -->
+    <!-- ============ 顶部导航（外壳，切主题不变） ============ -->
     <nav class="nav">
         <div class="nav-inner">
             <a href="#home" class="nav-brand">🎐 Rin9</a>
 
-            <div class="nav-links" id="navLinks">
-                <a href="#home">首页</a>
-                <a href="#milestones">里程碑</a>
-                <a href="#works">作品集</a>
-                <a href="#notes">日常记录</a>
-                <a href="#gallery">照片墙</a>
-                <a href="#links">链接</a>
-            </div>
+            <div class="nav-links" id="navLinks"></div>
 
             <div class="nav-tools">
-                <button class="icon-btn" id="themeBtn" aria-label="切换主题">☀️</button>
+                <button class="icon-btn" id="skinBtn" aria-label="切换界面风格" title="切换界面">◈</button>
+                <button class="icon-btn" id="themeBtn" aria-label="切换深浅色">☀️</button>
                 <button class="icon-btn nav-toggle" id="navToggle" aria-label="打开菜单">☰</button>
             </div>
         </div>
     </nav>
 
-    <div class="container">
+    <!-- 界面切换菜单 -->
+    <div class="skin-menu" id="skinMenu"></div>
 
-        <!-- ============ Hero ============ -->
-        <header class="hero" id="home">
-            <img class="avatar" id="avatar" alt="头像">
+    <!-- ============ 主题渲染区 ============ -->
+    <div id="app"></div>
 
-            <div class="hero-body">
-                <span class="hero-tag" id="heroTagline">日常记录 · 未来作品集</span>
-                <h1 id="heroName">Rin9's Website</h1>
-                <p id="heroIntro">欢迎你的到来~~~~</p>
-
-                <div class="hero-actions">
-                    <a class="btn" href="#works">看作品集</a>
-                    <button class="btn ghost" id="musicBtn" aria-pressed="false">🎵 音乐</button>
-                </div>
-
-                <!-- 背景音乐：由音乐聚合器控制 -->
-                <audio id="bgm" loop preload="none">
-                    <source id="bgmSource" src="music/bgm.wav" type="audio/wav">
-                    您的浏览器不支持音频播放。
-                </audio>
-            </div>
-        </header>
-
-        <!-- ============ 常用链接 ============ -->
-        <section class="section" id="links">
-            <div class="section-head">
-                <h2>✨ 常用链接</h2>
-                <p>常去的地方，点一下就过去</p>
-            </div>
-            <div class="card reveal">
-                <div class="links-grid" id="linksGrid"></div>
-            </div>
-        </section>
-
-        <!-- ============ 成长里程碑 ============ -->
-        <section class="section" id="milestones">
-            <div class="section-head">
-                <h2>🏔️ 成长里程碑</h2>
-                <p>那些回想起来会感慨的时刻</p>
-            </div>
-            <div class="milestone-list" id="milestoneList"></div>
-        </section>
-
-        <!-- ============ 作品集 ============ -->
-        <section class="section" id="works">
-            <div class="section-head">
-                <h2>🧩 作品集</h2>
-                <p>在做的和做完的东西，慢慢添</p>
-            </div>
-            <div class="filter-bar" id="filterBar"></div>
-            <div class="works-grid" id="worksGrid"></div>
-        </section>
-
-        <!-- ============ 日常记录 ============ -->
-        <section class="section" id="notes">
-            <div class="section-head">
-                <h2>📔 日常记录</h2>
-                <p>一些碎碎念，按时间往下翻</p>
-            </div>
-            <div class="timeline" id="notesList"></div>
-        </section>
-
-        <!-- ============ 照片墙 ============ -->
-        <section class="section" id="gallery">
-            <div class="section-head">
-                <h2>🖼️ 照片墙</h2>
-                <p>点开看大图</p>
-            </div>
-            <div class="gallery" id="galleryGrid"></div>
-        </section>
-
-        <!-- ============ 页脚 ============ -->
-        <footer class="footer">
-            <div class="footer-links">
-                <a href="https://github.com/OoRin9oO" target="_blank" rel="noopener">GitHub</a>
-                <a href="https://bilibili.com" target="_blank" rel="noopener">bilibili</a>
-                <a href="mailto:your-mail@example.com" id="mailLink">联系我</a>
-            </div>
-            <div>© <span id="year">2026</span> Rin9 · 用 GitHub Pages 托管</div>
-        </footer>
-
-    </div>
-
-    <!-- ============ 灯箱 ============ -->
+    <!-- ============ 灯箱（外壳） ============ -->
     <div class="lightbox" id="lightbox">
         <button class="lightbox-close" aria-label="关闭">✕</button>
         <img id="lightboxImg" src="" alt="">
         <div class="lightbox-cap" id="lightboxCap"></div>
     </div>
 
-    <!-- ============ 音乐聚合器 ============ -->
+    <!-- ============ 音乐播放器（外壳，切主题不断歌） ============ -->
+    <audio id="bgm" loop preload="none">
+        <source id="bgmSource" src="">
+        您的浏览器不支持音频播放。
+    </audio>
+
     <div class="music-panel" id="musicPanel" aria-hidden="true">
         <div class="music-head">
             <div>
@@ -166,9 +87,9 @@
     <!-- 回到顶部 -->
     <button class="to-top" id="toTop" aria-label="回到顶部">↑</button>
 
-    <!-- 数据先行，视图随后 -->
+    <!-- 数据 → 外壳 → 播放器 -->
     <script src="js/data.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/player.js"></script>
+    <script src="js/core/shell.js"></script>
+    <script src="js/core/player.js"></script>
 </body>
 </html>

@@ -225,6 +225,7 @@ window.SITE_DATA = `;
         // 顶层各板块前加一行说明，方便以后手改时知道每个字段干什么
         const SEC_COMMENT = {
             layout: "页面布局（板块顺序 / 钉住 / 隐藏）",
+            appearance: "外观（界面风格 / 配色 / 圆角 / 栏宽 / 字体 / 疏密）",
             profile: "基本资料",
             music: "音乐库（tracks 歌曲 / playlists 歌单 / recommend 外链推荐）",
             links: "常用链接",
@@ -545,6 +546,7 @@ window.SITE_DATA = `;
         const main = $("#main");
         if (S.section === "settings") return renderSettings(main);
         if (S.section === "layout") return renderLayout(main);
+        if (S.section === "appearance") return renderAppearance(main);
         if (S.section === "music") return renderMusic(main);
         if (S.section === "images") return renderImages(main);
         if (S.section === "publish") return renderPublish(main);
@@ -1101,6 +1103,219 @@ window.SITE_DATA = `;
     }
 
     /* ============================================================
+       外观面板
+       —— 界面选择 + 视觉基调（主色/圆角/栏宽/字体/疏密）
+       ============================================================ */
+    const SKINS = [
+        { id: "classic", icon: "▦", name: "经典", desc: "干净、安静、看得清" },
+        { id: "motion", icon: "≈", name: "流动", desc: "会动的排版，滚动有层次" },
+    ];
+
+    const FONT_OPTS = [
+        { id: "system", name: "系统默认" },
+        { id: "serif", name: "衬线（宋体）" },
+        { id: "rounded", name: "圆润" },
+        { id: "mono", name: "等宽" },
+    ];
+
+    const DENSITY_OPTS = [
+        { id: "compact", name: "紧凑" },
+        { id: "normal", name: "标准" },
+        { id: "loose", name: "宽松" },
+    ];
+
+    function appearance() {
+        if (!S.data.appearance) {
+            S.data.appearance = {
+                skin: "classic", mode: "dark", accent: "#a78bfa",
+                accent2: "#6c63ff", radius: 18, maxw: 920,
+                blur: 14, font: "system", density: "normal",
+            };
+        }
+        return S.data.appearance;
+    }
+
+    /* 把外观推到预览 iframe，立即生效 */
+    function pushAppearance(delaySkin) {
+        const f = $("#previewFrame");
+        const w = f && f.contentWindow;
+        if (!w || !w.RinSite) return;
+        const a = appearance();
+
+        // 数据换掉再重应用
+        try {
+            w.SITE_DATA = JSON.parse(JSON.stringify(stripInternal(S.data)));
+        } catch (e) { /* ignore */ }
+
+        if (typeof w.RinSite.applyAppearance === "function") w.RinSite.applyAppearance();
+
+        if (delaySkin) {
+            clearTimeout(S._skinTimer);
+            S._skinTimer = setTimeout(() => {
+                if (w.RinSite && w.RinSite.skin !== a.skin) w.RinSite.setSkin(a.skin);
+            }, 200);
+        }
+    }
+
+    function renderAppearance(main) {
+        const a = appearance();
+
+        main.innerHTML = `<div class="sec-head">
+            <h2>🎨 外观</h2>
+            <p>界面风格与整站视觉基调</p></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">界面风格</span>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:10px">
+                点一下就能在右侧预览里立刻切换。内容是同一份，只是呈现方式不同。
+            </div>
+            <div class="skin-pick">
+                ${SKINS.map(s => `
+                    <button class="skin-card${a.skin === s.id ? " on" : ""}" data-pick-skin="${s.id}">
+                        <span class="sc-icon">${s.icon}</span>
+                        <span class="sc-name">${esc(s.name)}</span>
+                        <span class="sc-desc">${esc(s.desc)}</span>
+                        <span class="sc-check">✓</span>
+                    </button>`).join("")}
+            </div>
+            <div class="tip" style="margin-top:10px">
+                这里设的是<b>默认界面</b>（访客第一次来看到哪个）。
+                访客自己切换过的话，会记住各自的选择。
+            </div>
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">配色</span>
+        </div><div class="item-body">
+            <div class="row">
+                <div class="field"><label>主色</label>
+                    <div class="color-row">
+                        <input type="color" id="apAccent" value="${esc(a.accent || "#a78bfa")}">
+                        <input class="inp" id="apAccentHex" value="${esc(a.accent || "#a78bfa")}">
+                    </div></div>
+                <div class="field"><label>辅色</label>
+                    <div class="color-row">
+                        <input type="color" id="apAccent2" value="${esc(a.accent2 || "#6c63ff")}">
+                        <input class="inp" id="apAccent2Hex" value="${esc(a.accent2 || "#6c63ff")}">
+                    </div></div>
+            </div>
+            <div class="field"><label>默认深浅色</label>
+                <select class="sel" id="apMode">
+                    <option value="dark"${a.mode === "dark" ? " selected" : ""}>深色</option>
+                    <option value="light"${a.mode === "light" ? " selected" : ""}>浅色</option>
+                </select></div>
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">版式</span>
+        </div><div class="item-body">
+            <div class="field">
+                <label>圆角：<span id="apRadiusVal">${a.radius}</span> px</label>
+                <input type="range" id="apRadius" min="0" max="32" value="${a.radius}" style="width:100%">
+            </div>
+            <div class="field">
+                <label>内容栏宽：<span id="apMaxwVal">${a.maxw}</span> px</label>
+                <input type="range" id="apMaxw" min="720" max="1200" step="20" value="${a.maxw}" style="width:100%">
+            </div>
+            <div class="field">
+                <label>背景模糊：<span id="apBlurVal">${a.blur}</span> px</label>
+                <input type="range" id="apBlur" min="0" max="30" value="${a.blur}" style="width:100%">
+            </div>
+            <div class="row">
+                <div class="field"><label>字体</label>
+                    <select class="sel" id="apFont">
+                        ${FONT_OPTS.map(f => `<option value="${f.id}"${a.font === f.id ? " selected" : ""}>${f.name}</option>`).join("")}
+                    </select></div>
+                <div class="field"><label>疏密</label>
+                    <select class="sel" id="apDensity">
+                        ${DENSITY_OPTS.map(d => `<option value="${d.id}"${a.density === d.id ? " selected" : ""}>${d.name}</option>`).join("")}
+                    </select></div>
+            </div>
+            <button class="btn ghost sm" id="apReset" style="margin-top:8px">恢复默认外观</button>
+        </div></div>`;
+
+        /* ---------- 事件 ---------- */
+        $$("[data-pick-skin]", main).forEach(b => b.addEventListener("click", () => {
+            a.skin = b.dataset.pickSkin;
+            markDirty();
+            render();
+            pushAppearance(true);
+            toast("已切换到「" + (SKINS.find(s => s.id === a.skin) || {}).name + "」", "ok");
+        }));
+
+        const bindColor = (colorId, hexId, key) => {
+            const c = $("#" + colorId), h = $("#" + hexId, main);
+            if (!c || !h) return;
+            c.addEventListener("input", () => {
+                h.value = c.value;
+                a[key] = c.value;
+                markDirtySoft();
+                pushAppearance();
+            });
+            h.addEventListener("input", () => {
+                if (/^#[0-9a-f]{6}$/i.test(h.value)) {
+                    c.value = h.value;
+                    a[key] = h.value;
+                    markDirtySoft();
+                    pushAppearance();
+                }
+            });
+        };
+        bindColor("apAccent", "apAccentHex", "accent");
+        bindColor("apAccent2", "apAccent2Hex", "accent2");
+
+        const bindRange = (id, valId, key) => {
+            const el = $("#" + id, main), lab = $("#" + valId, main);
+            if (!el) return;
+            el.addEventListener("input", () => {
+                a[key] = Number(el.value);
+                if (lab) lab.textContent = el.value;
+                markDirtySoft();
+                pushAppearance();
+            });
+        };
+        bindRange("apRadius", "apRadiusVal", "radius");
+        bindRange("apMaxw", "apMaxwVal", "maxw");
+        bindRange("apBlur", "apBlurVal", "blur");
+
+        $("#apFont", main)?.addEventListener("change", (e) => {
+            a.font = e.target.value;
+            markDirtySoft();
+            pushAppearance();
+        });
+        $("#apDensity", main)?.addEventListener("change", (e) => {
+            a.density = e.target.value;
+            markDirtySoft();
+            pushAppearance();
+        });
+        $("#apMode", main)?.addEventListener("change", (e) => {
+            a.mode = e.target.value;
+            markDirtySoft();
+            const w = $("#previewFrame")?.contentWindow;
+            if (!w) return;
+            try {
+                w.localStorage.setItem("rin9-mode", a.mode);
+                w.document.documentElement.setAttribute("data-theme", a.mode);
+                const btn = w.document.querySelector("#themeBtn");
+                if (btn) btn.textContent = a.mode === "light" ? "🌙" : "☀️";
+            } catch (err) { /* ignore */ }
+        });
+
+        $("#apReset", main)?.addEventListener("click", () => {
+            S.data.appearance = {
+                skin: "classic", mode: "dark", accent: "#a78bfa",
+                accent2: "#6c63ff", radius: 18, maxw: 920,
+                blur: 14, font: "system", density: "normal",
+            };
+            markDirty();
+            render();
+            pushAppearance(true);
+            toast("外观已恢复默认", "ok");
+        });
+    }
+
+    /* ============================================================
        页面布局面板
        —— 板块顺序 / 钉住 / 隐藏 / 标题
        ============================================================ */
@@ -1483,7 +1698,9 @@ window.SITE_DATA = `;
 
                 // 2. 收集所有引用来源：data.js + css + html
                 const refs = new Set(used);
-                for (const path of ["js/data.js", "css/style.css", "index.html", "css/admin.css"]) {
+                for (const path of ["js/data.js", "css/base.css", "css/themes/classic.css",
+                                      "css/themes/motion.css", "css/admin.css",
+                                      "index.html", "music.html"]) {
                     try {
                         const r = await fetch(path + "?t=" + Date.now());
                         if (!r.ok) continue;
@@ -2448,9 +2665,18 @@ window.SITE_DATA = `;
         if (!w) return;
         try {
             w.SITE_DATA = JSON.parse(JSON.stringify(stripInternal(S.data)));
-            if (typeof w.__rerender === "function") w.__rerender();
+            if (w.RinSite) {
+                const a = appearance();
+                // 预览里强制用编辑器设定的默认值，避免被浏览器里残留的选择干扰
+                w.localStorage.setItem("rin9-mode", a.mode || "dark");
+                w.document.documentElement.setAttribute("data-theme", a.mode || "dark");
+                w.RinSite.applyAppearance();
+                w.RinSite.setSkin(a.skin || "classic");
+            } else if (typeof w.__rerender === "function") {
+                w.__rerender();
+            }
         } catch (e) { /* ignore */ }
-        pushLayoutToFrame();
+        setTimeout(() => { pushLayoutToFrame(); pushAppearance(); }, 700);
     }
 
     /* ============================================================

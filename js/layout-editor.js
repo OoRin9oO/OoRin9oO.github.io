@@ -149,27 +149,39 @@
         applyAll();
     }
 
-    /* ---------- 应用布局 ---------- */
+    /* ---------- 应用布局 ----------
+       优先交给站点外壳（它知道各主题的容器结构，不会把 Hero 挪错地方）；
+       没有外壳时退回自己操作 DOM */
     function applyAll() {
-        const main = document.querySelector("main") || document.body;
-        // 按 order 排序
-        state.order.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) main.appendChild(el);
-        });
-        // 隐藏
-        SECTIONS.forEach(s => {
-            const el = document.getElementById(s.id);
-            if (!el) return;
-            el.style.display = state.hidden.includes(s.id) ? "none" : "";
-        });
-        // 钉住
+        // 先把状态写回数据，外壳按数据重排
+        if (window.SITE_DATA) {
+            window.SITE_DATA.layout = window.SITE_DATA.layout || {};
+            window.SITE_DATA.layout.order = state.order.slice();
+            window.SITE_DATA.layout.pinned = state.pinned.slice();
+            window.SITE_DATA.layout.hidden = state.hidden.slice();
+        }
+
+        if (window.RinSite && typeof window.RinSite.applyLayout === "function") {
+            window.RinSite.applyLayout();
+        } else {
+            const main = document.querySelector("main") || document.body;
+            state.order.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) main.appendChild(el);
+            });
+            SECTIONS.forEach(s => {
+                const el = document.getElementById(s.id);
+                if (!el) return;
+                el.style.display = state.hidden.includes(s.id) ? "none" : "";
+            });
+        }
+
+        // 钉住的视觉提示由这里负责（编辑态标记）
         SECTIONS.forEach(s => {
             const el = document.getElementById(s.id);
             if (!el) return;
             const on = state.pinned.includes(s.id);
             el.classList.toggle("pinned", on);
-            el.style.outlineColor = on ? "#5fd39a" : "transparent";
             el.style.outline = on ? "2px dashed #5fd39a" : "2px dashed transparent";
         });
     }

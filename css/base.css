@@ -1,4 +1,10 @@
 /* ============================================================
+   base.css —— 全局壳层样式
+   所有主题共用：变量、基础、布局容器、导航、灯箱、播放器、回到顶部
+   主题专属样式在 css/themes/<name>.css
+   ============================================================ */
+
+/* ============================================================
    Rin9's Website — 样式表
    结构：1.变量  2.基础  3.布局  4.导航  5.各板块  6.响应式
    ============================================================ */
@@ -17,6 +23,9 @@
     --accent: #a78bfa;
     --accent-2: #6c63ff;
     --accent-soft: rgba(167, 139, 250, 0.14);
+    --accent-glow: rgba(167, 139, 250, 0.22);
+    --gap-scale: 1;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     --gold: #f5c26b;
     --shadow: 0 10px 34px rgba(0, 0, 0, 0.42);
     --radius: 18px;
@@ -127,7 +136,7 @@ a { color: inherit; text-decoration: none; }
     padding: 0 20px 80px;
 }
 
-.section { margin-top: 56px; scroll-margin-top: 84px; }
+.section { margin-top: calc(56px * var(--gap-scale, 1)); scroll-margin-top: 84px; }
 
 .section-head { margin-bottom: 22px; }
 
@@ -193,7 +202,7 @@ a { color: inherit; text-decoration: none; }
     font-size: 1.02rem;
     letter-spacing: 0.3px;
     white-space: nowrap;
-    background: linear-gradient(100deg, var(--accent), #fff 60%, var(--gold));
+    background: linear-gradient(100deg, var(--accent), var(--text) 60%, var(--gold));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -247,386 +256,6 @@ a { color: inherit; text-decoration: none; }
 
 .nav-toggle { display: none; }
 
-/* ---------- 5. Hero ---------- */
-.hero {
-    margin-top: 46px;
-    display: grid;
-    grid-template-columns: 190px 1fr;
-    gap: 30px;
-    align-items: center;
-}
-
-.avatar {
-    width: 190px;
-    height: 190px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid var(--accent);
-    box-shadow: 0 0 0 6px var(--accent-soft), var(--shadow);
-    transition: transform 0.4s var(--ease);
-}
-
-.avatar:hover { transform: scale(1.03) rotate(-2deg); }
-
-.hero-body h1 {
-    font-size: 2.1rem;
-    line-height: 1.25;
-    margin-bottom: 8px;
-    background: linear-gradient(100deg, var(--accent), #fff 55%, var(--gold));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.hero-tag {
-    display: inline-block;
-    font-size: 0.78rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    padding: 3px 12px;
-    margin-bottom: 12px;
-}
-
-.hero-body p { color: var(--text-dim); margin-bottom: 18px; }
-
-.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-.btn {
-    padding: 9px 20px;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    background: linear-gradient(120deg, var(--accent-2), var(--accent));
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), opacity 0.2s;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(108, 99, 255, 0.38);
-}
-
-.btn.ghost {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--text);
-}
-
-.btn.ghost:hover { border-color: var(--accent); background: var(--accent-soft); }
-
-/* ---------- 6. 常用链接 ---------- */
-.links-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 14px;
-}
-
-.link-item {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 18px 12px;
-    text-align: center;
-    transition: all 0.28s var(--ease);
-}
-
-.link-item:hover {
-    background: var(--card-hover);
-    transform: translateY(-4px);
-    border-color: var(--accent);
-    box-shadow: 0 10px 24px rgba(108, 99, 255, 0.22);
-}
-
-.link-item .icon { font-size: 1.9rem; line-height: 1.2; }
-.link-item .name { display: block; margin-top: 6px; font-size: 0.88rem; color: var(--text-dim); }
-.link-item:hover .name { color: var(--text); }
-
-/* ---------- 7. 成长里程碑 ---------- */
-.milestone-list { display: flex; flex-direction: column; gap: 14px; }
-
-.milestone {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    padding: 20px 22px;
-    background: var(--card);
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s var(--ease);
-}
-
-.milestone::after {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 3px;
-    background: linear-gradient(var(--accent), var(--accent-2));
-    opacity: 0.55;
-}
-
-.milestone:hover {
-    background: var(--card-hover);
-    border-color: var(--accent);
-    transform: translateX(3px);
-}
-
-.milestone-icon {
-    flex: none;
-    width: 46px;
-    height: 46px;
-    display: grid;
-    place-items: center;
-    font-size: 1.5rem;
-    border-radius: 14px;
-    background: var(--accent-soft);
-    border: 1px solid var(--border);
-}
-
-.milestone-body { flex: 1; min-width: 0; }
-
-.milestone-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    margin: 3px 0 6px;
-}
-
-/* ---------- 8. 作品集 ---------- */
-.filter-bar {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 18px;
-}
-
-.filter-btn {
-    padding: 5px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    font-size: 0.84rem;
-    cursor: pointer;
-    transition: all 0.25s var(--ease);
-}
-
-.filter-btn:hover { color: var(--text); border-color: var(--accent); }
-
-.filter-btn.active {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-    color: var(--text);
-}
-
-.works-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-    align-items: start;   /* 有封面/无封面的卡片各自按内容高度，不强行拉伸 */
-}
-
-.work-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 0;
-    overflow: hidden;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: all 0.3s var(--ease);
-}
-
-/* 作品封面 */
-.work-cover {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
-    border-bottom: 1px solid var(--border);
-}
-
-.work-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s var(--ease);
-}
-
-.work-card:hover .work-cover img { transform: scale(1.06); }
-
-.work-card > *:not(.work-cover) { margin-left: 20px; margin-right: 20px; }
-.work-card > .work-cover { margin: 0; }
-.work-card > .work-top { margin-top: 18px; }
-.work-card > .work-links { margin-bottom: 18px; }
-
-.work-card:hover {
-    background: var(--card-hover);
-    transform: translateY(-4px);
-    border-color: var(--accent);
-    box-shadow: 0 10px 26px rgba(108, 99, 255, 0.22);
-}
-
-.work-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.work-title { font-size: 1.02rem; font-weight: 700; }
-.work-desc { font-size: 0.87rem; color: var(--text-dim); flex: 1; }
-
-.work-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-
-.tag {
-    font-size: 0.72rem;
-    padding: 2px 9px;
-    border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    border: 1px solid transparent;
-}
-
-html[data-theme="light"] .tag { color: var(--accent-2); }
-
-.badge {
-    font-size: 0.7rem;
-    padding: 2px 9px;
-    border-radius: 999px;
-    white-space: nowrap;
-    border: 1px solid var(--border);
-    color: var(--text-faint);
-}
-
-.badge.done { color: #7ee2a8; border-color: rgba(126, 226, 168, 0.4); }
-.badge.wip { color: var(--gold); border-color: rgba(245, 194, 107, 0.4); }
-.badge.plan { color: var(--text-faint); }
-
-.work-links { display: flex; gap: 14px; font-size: 0.82rem; color: var(--accent); }
-.work-links a:hover { text-decoration: underline; }
-
-/* ---------- 9. 日常记录 ---------- */
-.timeline { position: relative; padding-left: 22px; }
-
-.timeline::before {
-    content: "";
-    position: absolute;
-    left: 5px;
-    top: 6px;
-    bottom: 6px;
-    width: 2px;
-    background: linear-gradient(var(--accent), transparent);
-}
-
-.entry {
-    position: relative;
-    margin-bottom: 18px;
-    padding: 18px 20px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: all 0.3s var(--ease);
-}
-
-.entry:hover { background: var(--card-hover); border-color: var(--accent); }
-
-.entry::before {
-    content: "";
-    position: absolute;
-    left: -21px;
-    top: 24px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 4px var(--accent-soft);
-}
-
-.entry-date {
-    font-size: 0.78rem;
-    color: var(--accent);
-    letter-spacing: 0.6px;
-    font-weight: 600;
-}
-
-.entry-title { font-size: 1rem; font-weight: 700; margin: 3px 0 6px; }
-.entry-text { font-size: 0.88rem; color: var(--text-dim); }
-
-/* 记录配图 */
-.entry-imgs {
-    display: flex;
-    gap: 10px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-}
-
-.entry-imgs img {
-    width: 118px;
-    height: 84px;
-    object-fit: cover;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    cursor: zoom-in;
-    background: linear-gradient(135deg, var(--accent-soft), transparent);
-    transition: transform 0.35s var(--ease), border-color 0.35s var(--ease);
-}
-
-.entry-imgs img:hover {
-    transform: scale(1.06);
-    border-color: var(--accent);
-}
-
-/* ---------- 10. 照片墙 ----------
-   用 CSS 多列实现瀑布流：图片按原始比例完整显示，不裁剪、不拉伸 */
-.gallery {
-    columns: 4 220px;
-    column-gap: 12px;
-}
-
-.gallery-item {
-    position: relative;
-    overflow: hidden;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    margin-bottom: 12px;
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-    page-break-inside: avoid;
-    cursor: zoom-in;
-    background: linear-gradient(135deg, var(--accent-soft), transparent);
-    display: block;
-}
-
-.gallery-item img {
-    width: 100%;
-    height: auto;          /* 保持原始比例，绝不裁剪 */
-    display: block;
-    transition: transform 0.5s var(--ease);
-}
-
-.gallery-item:hover img { transform: scale(1.05); }
-
-.gallery-item figcaption {
-    position: absolute;
-    inset: auto 0 0 0;
-    padding: 20px 12px 9px;
-    font-size: 0.8rem;
-    color: #fff;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-    transform: translateY(100%);
-    transition: transform 0.35s var(--ease);
-}
-
-.gallery-item:hover figcaption { transform: translateY(0); }
-
 /* 灯箱 */
 .lightbox {
     position: fixed;
@@ -674,19 +303,6 @@ html[data-theme="light"] .tag { color: var(--accent-2); }
     color: var(--text-dim);
     font-size: 0.88rem;
 }
-
-/* ---------- 11. 页脚 ---------- */
-.footer {
-    margin-top: 64px;
-    padding-top: 26px;
-    border-top: 1px solid var(--border);
-    text-align: center;
-    color: var(--text-faint);
-    font-size: 0.84rem;
-}
-
-.footer-links { display: flex; justify-content: center; gap: 18px; margin-bottom: 10px; }
-.footer-links a:hover { color: var(--accent); }
 
 /* ---------- 12. 回到顶部 ---------- */
 .to-top {
@@ -964,11 +580,8 @@ body.music-page { background-attachment: fixed; }
 }
 .rc-arrow { font-size: 1.1rem; color: var(--faint); flex: none; }
 
+
 @media (max-width: 720px) {
-    .hero { grid-template-columns: 1fr; text-align: center; justify-items: center; }
-    .hero-actions { justify-items: center; }
-    .avatar { width: 140px; height: 140px; }
-    .hero-body h1 { font-size: 1.7rem; }
     .card { padding: 20px; }
     .music-panel { width: 100vw; }
     .track-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
@@ -998,4 +611,102 @@ body.music-page { background-attachment: fixed; }
 @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition-duration: 0.01ms !important; }
     html { scroll-behavior: auto; }
+}
+/* ============================================================
+   界面切换（shell 层）
+   ============================================================ */
+.skin-menu {
+    position: absolute;
+    top: 62px;
+    right: max(16px, calc((100vw - var(--maxw)) / 2 + 8px));
+    z-index: 120;
+    width: 268px;
+    padding: 8px;
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+    backdrop-filter: var(--blur);
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+    pointer-events: none;
+    transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+}
+
+.skin-menu.open {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+.skin-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.skin-item:hover {
+    background: var(--accent-soft);
+    border-color: var(--border);
+}
+
+.skin-item.current {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.skin-icon {
+    width: 34px; height: 34px;
+    flex: none;
+    display: grid; place-items: center;
+    border-radius: 10px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+    color: var(--accent);
+}
+
+.skin-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.skin-name { font-size: 0.86rem; font-weight: 600; }
+.skin-desc { font-size: 0.72rem; color: var(--text-faint); }
+
+.skin-check {
+    color: var(--accent);
+    font-size: 0.8rem;
+    opacity: 0;
+    flex: none;
+}
+
+.skin-item.current .skin-check { opacity: 1; }
+
+.skin-foot {
+    margin-top: 6px;
+    padding: 8px 12px 4px;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    line-height: 1.6;
+}
+
+/* 主题切换时的呼吸感 */
+#app { transition: opacity 0.2s var(--ease), transform 0.24s var(--ease); }
+#app.skin-leaving { opacity: 0; transform: translateY(6px); }
+#app.skin-entering { animation: skin-in 0.5s var(--ease); }
+
+@keyframes skin-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 620px) {
+    .skin-menu { right: 12px; left: 12px; width: auto; }
 }

@@ -83,11 +83,12 @@
         $("#musicNowArtist").textContent = t ? (t.artist || "") : "选一首歌开始吧";
         const btn = $("#musicToggle");
         if (btn) btn.textContent = M.playing ? "⏸ 暂停" : "▶ 播放";
-        const mb = $("#musicBtn");
-        if (mb) {
-            mb.textContent = M.playing ? "🎵 播放中" : "🎵 音乐";
+        $$("[data-player-toggle]").forEach(mb => {
+            if (mb.classList.contains("btn") || mb.classList.contains("m-btn")) {
+                mb.textContent = M.playing ? "🔊 播放中" : (mb.textContent.includes("♪") ? "♪ 音乐" : "🎵 音乐");
+            }
             mb.setAttribute("aria-pressed", String(M.playing));
-        }
+        });
         renderList();
     }
 
@@ -187,11 +188,11 @@
         M.queue = M.tracks.map(t => t.id);
 
         const audio = $("#bgm");
-        const mb = $("#musicBtn");
-        if (!audio || !mb) return;
+        if (!audio) return;
 
-        // 按钮：打开面板
-        mb.addEventListener("click", () => {
+        // 音乐按钮用事件委托：主题切换会重建 DOM，直接绑会丢
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest("[data-player-toggle]")) return;
             if (M.panelOpen) closePanel(); else openPanel();
         });
         $("#musicClose")?.addEventListener("click", closePanel);
