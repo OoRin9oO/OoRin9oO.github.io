@@ -41,8 +41,11 @@
     </div>
 
     <!-- ============ 音乐播放器（外壳，切主题不断歌） ============ -->
+    <!-- 注意：source 不要留空的 src —— 空 src 会被解析成页面自身地址，
+         浏览器会一直尝试把 HTML 当音频加载，导致页面 load 事件永不触发，
+         进而让后续动态插入的主题脚本挂住 -->
     <audio id="bgm" loop preload="none">
-        <source id="bgmSource" src="">
+        <source id="bgmSource">
         您的浏览器不支持音频播放。
     </audio>
 
