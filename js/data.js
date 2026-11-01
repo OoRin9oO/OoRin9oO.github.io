@@ -20,7 +20,7 @@ window.SITE_DATA = {
         hidden: []
     }  /* 页面布局（板块顺序 / 钉住 / 隐藏） */,
     appearance: {
-        skin: "motion",
+        skin: "galaxy",
         mode: "dark",
         accent: "#9790ad",
         accent2: "#9291ac",
@@ -29,8 +29,8 @@ window.SITE_DATA = {
         blur: 14,
         font: "system",
         density: "normal",
-        centerWork: "关于本网站"
-    }  /* 外观（界面风格 / 配色 / 圆角 / 栏宽 / 字体 / 疏密 / 星图主星） */,
+        centerWork: "爱依计划"
+    }  /* 外观（界面风格 / 配色 / 圆角 / 栏宽 / 字体 / 疏密） */,
     sections: {
         links: {
             title: "✨ 常用链接",
