@@ -122,6 +122,18 @@ window.SITE_DATA = {
     ]  /* 常用链接 */,
     milestones: [
         {
+            date: "2026-11-01",
+            title: "GitHub娘企划正式建立建仓",
+            desc: "现在在我的Github主页看到名为”Mina“的项目，此项目用于静态图片角色AI直播流程，同时添加了不少功能，达到了v0.1的状态。",
+            icon: "🐙"
+        },
+        {
+            date: "2026-11-01",
+            title: "为网站添加了新的表现形式——星图",
+            desc: "修复了部分bug，并同步添加相关功能进入编辑器，现在可切换为星图形式。",
+            icon: "✦"
+        },
+        {
             date: "2026-10-31",
             title: "给网站添加了新的表现形式",
             desc: "今天给网站和编辑器略微做了调整，修改了相关地方，体验更加方便快捷。",
@@ -213,6 +225,12 @@ window.SITE_DATA = {
     ]  /* 作品集（status: done 完成 / wip 进行中 / plan 规划中） */,
     notes: [
         {
+            date: "2026-11-01",
+            title: "GitHub娘-2",
+            desc: "搭建了通用静态角色直播平台（至少我可以这么叫它）并在GPT的帮助下完成了一大堆功能。",
+            images: ["img/w-20261101-w.webp"]
+        },
+        {
             date: "2026-10-27",
             title: "关于Github娘-project",
             desc: "今天用的是简单的生成图片方式为GitHub娘生成了Q版像素风格的图像，并目标制作一段子供向的AI视频（现在已经完成了36秒），目标是为了让GitHub娘（mino）成为网络偶像！",
@@ -242,6 +260,14 @@ window.SITE_DATA = {
         }
     ]  /* 日常记录（images 配图可点击放大） */,
     gallery: [
+        {
+            src: "img/y-20261101-y.webp",
+            caption: "病娇小游戏主界面照片"
+        },
+        {
+            src: "img/x-20261101-x.webp",
+            caption: "Github娘企划照片"
+        },
         {
             src: "img/v-20261027-v.webp",
             caption: "嘿咻嘿咻搬东西~"
