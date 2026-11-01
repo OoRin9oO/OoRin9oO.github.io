@@ -1171,6 +1171,8 @@ window.SITE_DATA = `;
         } catch (e) { /* ignore */ }
 
         if (typeof w.RinSite.applyAppearance === "function") w.RinSite.applyAppearance();
+        // 星图这类由数据驱动的界面，需要显式重绘才会换中心星
+        if (typeof w.RinSite.rerender === "function") w.RinSite.rerender();
 
         if (delaySkin) {
             clearTimeout(S._skinTimer);
@@ -1205,6 +1207,21 @@ window.SITE_DATA = `;
             <div class="tip" style="margin-top:10px">
                 这里设的是<b>默认界面</b>（访客第一次来看到哪个）。
                 访客自己切换过的话，会记住各自的选择。
+            </div>
+        </div></div>
+
+        <div class="item"><div class="item-head" style="cursor:default">
+            <span class="item-dot"></span><span class="item-title">星图主星</span>
+        </div><div class="item-body">
+            <div class="tip" style="margin-bottom:10px">
+                只有这里能改。访客看到的永远是这颗星在正中央，无权调整。
+            </div>
+            <div class="field"><label>中心项目</label>
+                <select class="sel" id="apCenterWork">
+                    ${(S.data.works || []).map(w => `
+                        <option value="${esc(w.title)}"${a.centerWork === w.title ? " selected" : ""}>${esc(w.title)}</option>
+                    `).join("")}
+                </select>
             </div>
         </div></div>
 
@@ -1323,6 +1340,13 @@ window.SITE_DATA = `;
                 const btn = w.document.querySelector("#themeBtn");
                 if (btn) btn.textContent = a.mode === "light" ? "🌙" : "☀️";
             } catch (err) { /* ignore */ }
+        });
+
+        $("#apCenterWork", main)?.addEventListener("change", (e) => {
+            a.centerWork = e.target.value;
+            markDirty();
+            pushAppearance(true);
+            toast("主星已设为「" + a.centerWork + "」", "ok");
         });
 
         $("#apReset", main)?.addEventListener("click", () => {

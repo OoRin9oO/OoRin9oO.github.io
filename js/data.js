@@ -28,8 +28,9 @@ window.SITE_DATA = {
         maxw: 920,
         blur: 14,
         font: "system",
-        density: "normal"
-    }  /* 外观（界面风格 / 配色 / 圆角 / 栏宽 / 字体 / 疏密） */,
+        density: "normal",
+        centerWork: "关于本网站"
+    }  /* 外观（界面风格 / 配色 / 圆角 / 栏宽 / 字体 / 疏密 / 星图主星） */,
     sections: {
         links: {
             title: "✨ 常用链接",
