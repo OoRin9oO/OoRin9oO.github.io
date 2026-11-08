@@ -11,6 +11,8 @@
     const esc = (s) => String(s == null ? "" : s)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+    const safeLink = (value) => /^(https?:\/\/)/i.test(String(value || "").trim())
+        ? esc(String(value).trim()) : "#";
 
     function renderTracks() {
         const grid = $("#trackGrid");
@@ -25,7 +27,7 @@
 
         grid.innerHTML = tracks.map(t => `
             <div class="track-card" data-id="${esc(t.id)}">
-                <div class="tc-cover" style="${t.cover ? `background-image:url('${esc(t.cover)}')` : ""}">
+                <div class="tc-cover">
                     <span class="tc-play">▶</span>
                 </div>
                 <div class="tc-info">
@@ -35,6 +37,10 @@
             </div>`).join("");
 
         $$(".track-card", grid).forEach(el => {
+            const track = tracks.find(t => String(t.id) === el.dataset.id);
+            if (track && /^(https?:\/\/|(?:\.\.?\/)?img\/)/i.test(String(track.cover || ""))) {
+                $(".tc-cover", el).style.backgroundImage = `url(${JSON.stringify(track.cover)})`;
+            }
             el.addEventListener("click", () => {
                 if (window.MusicPlayer) window.MusicPlayer.play(el.dataset.id);
             });
@@ -53,7 +59,7 @@
         }
 
         box.innerHTML = recs.map(r => `
-            <a class="rec-card" href="${esc(r.url)}" target="_blank" rel="noopener">
+            <a class="rec-card" href="${safeLink(r.url)}" target="_blank" rel="noopener noreferrer">
                 <div class="rc-icon">🔗</div>
                 <div class="rc-info">
                     <div class="rc-title">${esc(r.title)}</div>
@@ -81,9 +87,12 @@
         const apply = (t) => {
             document.documentElement.setAttribute("data-theme", t);
             btn.textContent = t === "light" ? "🌙" : "☀️";
-            localStorage.setItem("rin9-theme", t);
+            localStorage.setItem("rin9-mode", t);
         };
-        const saved = localStorage.getItem("rin9-theme") || "dark";
+        const saved = localStorage.getItem("rin9-mode")
+            || localStorage.getItem("rin9-theme")
+            || (D.appearance && D.appearance.mode)
+            || "dark";
         apply(saved);
         btn.addEventListener("click", () => {
             apply(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");

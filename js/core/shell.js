@@ -38,6 +38,13 @@
             css: "css/themes/galaxy.css",
             js: "js/themes/galaxy.js",
         },
+        souls: {
+            name: "余火之境",
+            icon: "♜",
+            desc: "像魂游一样探索网站",
+            css: "css/themes/souls.css",
+            js: "js/themes/souls.js",
+        },
     };
 
     const LS_SKIN = "rin9-skin";
@@ -311,7 +318,7 @@
             try {
                 cssLoaded = await loadCSS(def.css, "data-skin-css");
                 // 新的到位了再撤旧的，避免中间出现无样式闪烁
-                prevCss.forEach(l => l.remove());
+
             } catch (e) {
                 console.warn(e.message);
                 // 样式没下来就放弃，保持原样
@@ -334,7 +341,7 @@
                 console.error("主题脚本未注册：" + id);
                 // 有旧主题就留着，别把页面搞空
                 if (state.skin) {
-                    try { await loadCSS(THEMES[state.skin].css, "data-skin-css"); } catch (e) { /* ignore */ }
+                    if (cssLoaded) cssLoaded.remove();
                     toastMsg("界面加载失败，已保持原样");
                     return;
                 }
@@ -342,6 +349,8 @@
                     界面加载失败，请刷新重试</div>`;
                 return;
             }
+
+            prevCss.forEach(l => l.remove());
 
             // 2. 淡出旧主题
             if (root && state.skin) {

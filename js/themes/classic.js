@@ -16,6 +16,11 @@
 
         mount(root, ctx) {
             const openLightbox = ctx.openLightbox;
+            const esc = ctx.esc;
+            const safeUrl = (value) => {
+                const url = String(value || "").trim();
+                return /^(https?:\/\/|mailto:|(?:\.\.?\/)?(?:img|music)\/)/i.test(url) ? esc(url) : "#";
+            };
 
             /* ---------- 骨架 ---------- */
             function skeleton() {
@@ -23,11 +28,11 @@
                 return `
                 <div class="container">
                     <header class="hero" id="home">
-                        <img class="avatar" id="avatar" src="${p.avatar || ""}" alt="${p.name || ""} 的头像">
+                        <img class="avatar" id="avatar" src="${safeUrl(p.avatar)}" alt="${esc(p.name || "")} 的头像">
                         <div class="hero-body">
-                            <span class="hero-tag" id="heroTagline">${p.tagline || ""}</span>
-                            <h1 id="heroName">${p.name || "Rin9"}'s Website</h1>
-                            <p id="heroIntro">${p.intro || ""}</p>
+                            <span class="hero-tag" id="heroTagline">${esc(p.tagline)}</span>
+                            <h1 id="heroName">${esc(p.name || "Rin9")}'s Website</h1>
+                            <p id="heroIntro">${esc(p.intro)}</p>
                             <div class="hero-actions">
                                 <a class="btn" href="#works">看作品集</a>
                                 <button class="btn ghost" data-player-toggle aria-pressed="false">🎵 音乐</button>
@@ -67,7 +72,7 @@
                             <a href="https://github.com/OoRin9oO" target="_blank" rel="noopener">GitHub</a>
                             <a href="mailto:" id="mailLink">联系我</a>
                         </div>
-                        <div>© <span id="year"></span> ${p.name || "Rin9"} · 用 GitHub Pages 托管</div>
+                        <div>© <span id="year"></span> ${esc(p.name || "Rin9")} · 用 GitHub Pages 托管</div>
                     </footer>
                 </div>`;
             }
@@ -88,9 +93,9 @@
                 const linksBox = $("#linksGrid");
                 if (linksBox) {
                     linksBox.innerHTML = (d.links || []).map(l => `
-                        <a class="link-item" href="${l.url}" target="_blank" rel="noopener">
-                            <div class="icon">${l.icon || "🔗"}</div>
-                            <span class="name">${l.name || ""}</span>
+                        <a class="link-item" href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">
+                            <div class="icon">${esc(l.icon || "🔗")}</div>
+                            <span class="name">${esc(l.name)}</span>
                         </a>`).join("");
                 }
 
@@ -99,11 +104,11 @@
                 if (msBox) {
                     msBox.innerHTML = (d.milestones || []).map(m => `
                         <article class="milestone">
-                            <div class="milestone-icon">${m.icon || "✦"}</div>
+                            <div class="milestone-icon">${esc(m.icon || "✦")}</div>
                             <div class="milestone-body">
-                                <div class="entry-date">${m.date || ""}</div>
-                                <div class="milestone-title">${m.title || ""}</div>
-                                <p class="entry-text">${m.desc || ""}</p>
+                                <div class="entry-date">${esc(m.date)}</div>
+                                <div class="milestone-title">${esc(m.title)}</div>
+                                <p class="entry-text">${esc(m.desc)}</p>
                             </div>
                         </article>`).join("");
                 }
@@ -113,25 +118,25 @@
                 const bar = $("#filterBar");
                 if (grid) {
                     grid.innerHTML = (d.works || []).map(w => `
-                        <article class="work-card" data-tags="${(w.tags || []).join(",")}">
-                            ${w.cover ? `<div class="work-cover"><img src="${w.cover}" alt="${w.title || ""}" loading="lazy"></div>` : ""}
+                        <article class="work-card" data-tags="${esc((w.tags || []).join(","))}">
+                            ${w.cover ? `<div class="work-cover"><img src="${safeUrl(w.cover)}" alt="${esc(w.title)}" loading="lazy" decoding="async"></div>` : ""}
                             <div class="work-top">
-                                <div class="work-title">${w.title || ""}</div>
-                                <span class="badge ${w.status || ""}">${STATUS_TEXT[w.status] || w.status || ""}</span>
+                                <div class="work-title">${esc(w.title)}</div>
+                                <span class="badge ${STATUS_TEXT[w.status] ? w.status : ""}">${esc(STATUS_TEXT[w.status] || w.status)}</span>
                             </div>
-                            <p class="work-desc">${w.desc || ""}</p>
+                            <p class="work-desc">${esc(w.desc)}</p>
                             <div class="work-tags">
-                                ${(w.tags || []).map(t => `<span class="tag">${t}</span>`).join("")}
+                                ${(w.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
                             </div>
                             ${(w.links && w.links.length) ? `<div class="work-links">
-                                ${w.links.map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label} ↗</a>`).join("")}
+                                ${w.links.map(l => `<a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)} ↗</a>`).join("")}
                             </div>` : ""}
                         </article>`).join("");
                 }
                 if (bar) {
                     const cats = ["全部", ...new Set((d.works || []).flatMap(w => w.tags || []))];
                     bar.innerHTML = cats.map((c, i) =>
-                        `<button class="filter-btn${i === 0 ? " active" : ""}" data-cat="${c}">${c}</button>`
+                        `<button class="filter-btn${i === 0 ? " active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`
                     ).join("");
                 }
 
@@ -140,11 +145,11 @@
                 if (notesBox) {
                     notesBox.innerHTML = (d.notes || []).map(n => `
                         <article class="entry">
-                            <div class="entry-date">${n.date || ""}</div>
-                            <div class="entry-title">${n.title || ""}</div>
-                            <p class="entry-text">${n.desc || ""}</p>
+                            <div class="entry-date">${esc(n.date)}</div>
+                            <div class="entry-title">${esc(n.title)}</div>
+                            <p class="entry-text">${esc(n.desc)}</p>
                             ${(n.images && n.images.length) ? `<div class="entry-imgs">
-                                ${n.images.map(src => `<img src="${src}" alt="" loading="lazy" data-zoom="${src}">`).join("")}
+                                ${n.images.map(src => `<img src="${safeUrl(src)}" alt="" loading="lazy" decoding="async" data-zoom="${safeUrl(src)}">`).join("")}
                             </div>` : ""}
                         </article>`).join("");
                 }
@@ -154,8 +159,8 @@
                 if (gal) {
                     gal.innerHTML = (d.gallery || []).map((g, i) => `
                         <figure class="gallery-item" data-index="${i}">
-                            <img src="${g.src}" alt="${g.caption || ""}" loading="lazy" width="400" height="300">
-                            <figcaption>${g.caption || ""}</figcaption>
+                            <img src="${safeUrl(g.src)}" alt="${esc(g.caption)}" loading="lazy" decoding="async">
+                            <figcaption>${esc(g.caption)}</figcaption>
                         </figure>`).join("");
                 }
 

@@ -8,6 +8,9 @@
 
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const esc = (value) => String(value == null ? "" : value)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
     const M = {
         tracks: [],
@@ -33,8 +36,7 @@
     function renderPlaylists() {
         const sel = $("#musicPlaylistSel");
         if (!sel) return;
-        sel.innerHTML = M.playlists.map(p =>
-            `<option value="${p.id}">${p.name}</option>`).join("");
+        sel.replaceChildren(...M.playlists.map(p => new Option(p.name || "", p.id || "")));
     }
 
     function renderList() {
@@ -51,12 +53,15 @@
 
         box.innerHTML = items.map(t => {
             const cur = M.tracks[M.index] && M.tracks[M.index].id === t.id;
-            return `<div class="music-item${cur ? " playing" : ""}" data-id="${t.id}">
+            const cover = /^(https?:\/\/|(?:\.\.?\/)?img\/)/i.test(String(t.cover || ""))
+                ? String(t.cover).replace(/['()\\\s]/g, ch => "%" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0"))
+                : "";
+            return `<div class="music-item${cur ? " playing" : ""}" data-id="${esc(t.id)}">
                 <span class="mi-idx">${cur ? "▶" : ""}</span>
-                <span class="mi-cover" style="${t.cover ? `background-image:url('${t.cover}')` : ""}"></span>
+                <span class="mi-cover" style="${cover ? `background-image:url('${esc(cover)}')` : ""}"></span>
                 <span class="mi-info">
-                    <span class="mi-title">${t.title}</span>
-                    <span class="mi-artist">${t.artist || ""}</span>
+                    <span class="mi-title">${esc(t.title)}</span>
+                    <span class="mi-artist">${esc(t.artist)}</span>
                 </span>
                 <span class="mi-dur">${t.duration ? fmtTime(t.duration) : ""}</span>
             </div>`;

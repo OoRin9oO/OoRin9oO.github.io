@@ -16,6 +16,11 @@
 
         mount(root, ctx) {
             const openLightbox = ctx.openLightbox;
+            const esc = ctx.esc;
+            const safeUrl = (value) => {
+                const url = String(value || "").trim();
+                return /^(https?:\/\/|mailto:|(?:\.\.?\/)?(?:img|music)\/)/i.test(url) ? esc(url) : "#";
+            };
             let raf = null;
             let onMove = null;
 
@@ -109,9 +114,9 @@
                 const lk = $("#mLinks");
                 if (lk) {
                     lk.innerHTML = (d.links || []).map((l, i) => `
-                        <a class="m-link reveal" style="--i:${i}" href="${l.url}" target="_blank" rel="noopener">
-                            <span class="ic">${l.icon || "🔗"}</span>
-                            <span class="nm">${l.name || ""}</span>
+                        <a class="m-link reveal" style="--i:${i}" href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">
+                            <span class="ic">${esc(l.icon || "🔗")}</span>
+                            <span class="nm">${esc(l.name)}</span>
                         </a>`).join("");
                 }
 
@@ -120,10 +125,10 @@
                 if (ms) {
                     ms.innerHTML = (d.milestones || []).map((m, i) => `
                         <div class="m-ms-item reveal" style="--i:${i}">
-                            <span class="m-ms-dot">${m.icon || "✦"}</span>
-                            <div class="m-ms-date">${m.date || ""}</div>
-                            <div class="m-ms-title">${m.title || ""}</div>
-                            <div class="m-ms-desc">${m.desc || ""}</div>
+                            <span class="m-ms-dot">${esc(m.icon || "✦")}</span>
+                            <div class="m-ms-date">${esc(m.date)}</div>
+                            <div class="m-ms-title">${esc(m.title)}</div>
+                            <div class="m-ms-desc">${esc(m.desc)}</div>
                         </div>`).join("");
                 }
 
@@ -131,19 +136,19 @@
                 const wk = $("#mWorks");
                 if (wk) {
                     wk.innerHTML = (d.works || []).map((w, i) => `
-                        <article class="m-card reveal" style="--i:${i}" data-tags="${(w.tags || []).join(",")}">
-                            ${w.cover ? `<div class="m-cover"><img src="${w.cover}" alt="${w.title || ""}" loading="lazy"></div>` : ""}
+                        <article class="m-card reveal" style="--i:${i}" data-tags="${esc((w.tags || []).join(","))}">
+                            ${w.cover ? `<div class="m-cover"><img src="${safeUrl(w.cover)}" alt="${esc(w.title)}" loading="lazy" decoding="async"></div>` : ""}
                             <div class="m-card-body">
                                 <div class="m-card-top">
-                                    <span class="m-card-title">${w.title || ""}</span>
-                                    <span class="m-badge ${w.status || ""}">${STATUS[w.status] || w.status || ""}</span>
+                                    <span class="m-card-title">${esc(w.title)}</span>
+                                    <span class="m-badge ${STATUS[w.status] ? w.status : ""}">${esc(STATUS[w.status] || w.status)}</span>
                                 </div>
-                                <p class="m-card-desc">${w.desc || ""}</p>
+                                <p class="m-card-desc">${esc(w.desc)}</p>
                                 <div class="m-tags">
-                                    ${(w.tags || []).map(t => `<span class="m-tag-i">${t}</span>`).join("")}
+                                    ${(w.tags || []).map(t => `<span class="m-tag-i">${esc(t)}</span>`).join("")}
                                 </div>
                                 ${(w.links && w.links.length) ? `<div class="m-card-links">
-                                    ${w.links.map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label} ↗</a>`).join("")}
+                                    ${w.links.map(l => `<a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)} ↗</a>`).join("")}
                                 </div>` : ""}
                             </div>
                         </article>`).join("");
@@ -154,7 +159,7 @@
                 if (fb) {
                     const cats = ["全部", ...new Set((d.works || []).flatMap(w => w.tags || []))];
                     fb.innerHTML = cats.map((c, i) =>
-                        `<button class="m-filter${i === 0 ? " active" : ""}" data-cat="${c}">${c}</button>`
+                        `<button class="m-filter${i === 0 ? " active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`
                     ).join("");
                 }
 
@@ -163,11 +168,11 @@
                 if (nt) {
                     nt.innerHTML = (d.notes || []).map((n, i) => `
                         <article class="m-note reveal" style="--i:${i}">
-                            <div class="m-note-date">${n.date || ""}</div>
-                            <div class="m-note-title">${n.title || ""}</div>
-                            <div class="m-note-desc">${n.desc || ""}</div>
+                            <div class="m-note-date">${esc(n.date)}</div>
+                            <div class="m-note-title">${esc(n.title)}</div>
+                            <div class="m-note-desc">${esc(n.desc)}</div>
                             ${(n.images && n.images.length) ? `<div class="m-note-imgs">
-                                ${n.images.map(src => `<img src="${src}" alt="" loading="lazy" data-zoom="${src}">`).join("")}
+                                ${n.images.map(src => `<img src="${safeUrl(src)}" alt="" loading="lazy" decoding="async" data-zoom="${safeUrl(src)}">`).join("")}
                             </div>` : ""}
                         </article>`).join("");
                 }
@@ -177,8 +182,8 @@
                 if (ga) {
                     ga.innerHTML = (d.gallery || []).map((g, i) => `
                         <figure class="m-gphoto reveal" style="--i:${i % 8}" data-index="${i}">
-                            <img src="${g.src}" alt="${g.caption || ""}" loading="lazy">
-                            <figcaption>${g.caption || ""}</figcaption>
+                            <img src="${safeUrl(g.src)}" alt="${esc(g.caption)}" loading="lazy" decoding="async">
+                            <figcaption>${esc(g.caption)}</figcaption>
                         </figure>`).join("");
                 }
 
