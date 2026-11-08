@@ -13,37 +13,13 @@ html[data-skin="souls"] .to-top { display: none; }
 .souls-kicker { color: var(--fire); letter-spacing: .32em; font-size: 10px; }
 .souls-head h1 { font-family: Georgia, "Songti SC", serif; font-size: clamp(29px, 4vw, 47px); letter-spacing: .3em; font-weight: 500; margin: 2px 0; }
 .souls-head p { color: #b9b5a9; font-size: 12px; letter-spacing: .12em; }
-.souls-viewport { position: absolute; inset: 0; overflow: hidden; }
-.souls-world { position: absolute; width: 1600px; height: 1200px; transform-origin: top left; background:
-    radial-gradient(circle at 50% 52%, rgba(219,144,75,.12), transparent 13%),
-    radial-gradient(circle at 72% 37%, rgba(172,119,65,.1), transparent 18%),
-    radial-gradient(circle at 25% 36%, rgba(124,151,156,.11), transparent 18%),
-    radial-gradient(circle at 75% 70%, rgba(117,110,158,.1), transparent 19%),
-    radial-gradient(circle at 25% 72%, rgba(135,126,98,.1), transparent 18%),
-    repeating-linear-gradient(26deg, transparent 0 41px, rgba(255,255,255,.012) 42px 43px), #111a1b; }
-.souls-world::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .32; background-image: radial-gradient(#9ba19a 1px, transparent 1px); background-size: 43px 39px; }
-.souls-path { position: absolute; height: 25px; border-top: 2px dashed rgba(191,171,125,.24); border-bottom: 2px dashed rgba(191,171,125,.13); transform-origin: left center; filter: blur(.5px); }
-.path-a { width: 380px; left: 820px; top: 610px; transform: rotate(-27deg); }
-.path-b { width: 395px; left: 780px; top: 610px; transform: rotate(-143deg); }
-.path-c { width: 490px; left: 780px; top: 640px; transform: rotate(153deg); }
-.path-d { width: 470px; left: 820px; top: 640px; transform: rotate(27deg); }
-.souls-ruin { position: absolute; width: 135px; height: 95px; border: 12px double rgba(123,133,119,.12); border-radius: 40% 8% 35% 8%; transform: rotate(20deg); }
-.ruin-a { left: 170px; top: 250px; }.ruin-b { left: 1300px; top: 310px; transform: rotate(-30deg); }
-.ruin-c { left: 240px; top: 1000px; }.ruin-d { left: 1380px; top: 990px; }
-.souls-node { position: absolute; z-index: 2; transform: translate(-50%, -50%); width: 140px; height: 140px; border: 0; border-radius: 50%; color: #eee7d7; cursor: pointer;
-    background: radial-gradient(circle, rgba(237,180,107,.12), transparent 65%); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; }
-.souls-node::before { content: ""; position: absolute; inset: 25px; border: 1px solid rgba(238,185,120,.25); border-radius: 50%; box-shadow: 0 0 26px rgba(238,185,120,.16), inset 0 0 18px rgba(238,185,120,.1); }
-.souls-node::after { content: ""; position: absolute; top: 28px; width: 7px; height: 7px; border-radius: 50%; background: var(--fire); box-shadow: 0 0 15px 8px rgba(238,185,120,.25); animation: souls-ember 2.8s ease-in-out infinite alternate; }
-.souls-node-icon { position: relative; z-index: 1; font-family: Georgia, serif; font-size: 37px; line-height: 1; text-shadow: 0 0 20px var(--fire); }
-.souls-node-name { position: relative; z-index: 1; font-size: 12px; white-space: nowrap; letter-spacing: .13em; text-shadow: 0 2px 8px #000; }
-.souls-node:hover, .souls-node.near { background: radial-gradient(circle, rgba(240,175,94,.27), transparent 70%); }
-.souls-node:hover::before, .souls-node.near::before { border-color: var(--fire); }
-.souls-node.grave { --fire: #b9c7cc; }.souls-node.gallery { --fire: #b7a8df; }.souls-node.portal { --fire: #91c8bb; }.souls-node.journal { --fire: #d8c69d; }
-.souls-player { position: absolute; z-index: 4; width: 36px; height: 52px; transform: translate(-50%, -75%); filter: drop-shadow(0 9px 8px #000); }
-.souls-player::before { content: ""; position: absolute; left: 11px; top: 1px; width: 15px; height: 17px; background: #c4b9a7; border-radius: 50%; box-shadow: 0 -3px 0 2px #24272c; }
-.souls-player::after { content: ""; position: absolute; left: 6px; top: 16px; width: 25px; height: 34px; background: linear-gradient(100deg, #191d22, #3b3c3b 45%, #15191e); clip-path: polygon(28% 0, 75% 0, 100% 100%, 0 100%); }
-.souls-player span { position: absolute; z-index: 1; right: -10px; top: 23px; height: 28px; width: 3px; background: #969b97; transform: rotate(20deg); box-shadow: 0 0 5px #dad8be; }
-.souls-player.facing-left { scale: -1 1; }.souls-player.walking { animation: souls-step .22s linear infinite alternate; }
+.souls-stage { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+.souls-stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.souls-stage canvas:active { cursor: grabbing; }
+.souls-loading { position: absolute; top: 48%; left: 50%; transform: translate(-50%,-50%); color: #e5c497; letter-spacing: .2em; z-index: 2; text-align: center; }
+.souls-label { position: absolute; z-index: 3; transform: translate(-50%,-50%); border: 1px solid rgba(237,190,130,.5); background: rgba(10,14,17,.8); color: #f4dfbb; padding: 5px 12px; font: 12px Georgia,"Songti SC",serif; letter-spacing: .1em; white-space: nowrap; cursor: pointer; box-shadow: 0 0 18px #0008; }
+.souls-label:hover, .souls-label.near { background: rgba(91,67,41,.88); border-color: #eeb978; }
+.souls-label[hidden] { display: none; }
 .souls-hud { position: absolute; z-index: 5; top: 28px; left: 26px; width: 175px; font-size: 12px; color: #ddd4be; text-shadow: 0 2px 5px #000; }
 .souls-hp-label { display: block; letter-spacing: .15em; }.souls-hp { height: 7px; margin: 5px 0 8px; border: 1px solid #68564a; background: #251b19; }
 .souls-hp i { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, #7e3027, #c75341); }.souls-place { color: var(--fire); }
@@ -69,4 +45,4 @@ html[data-skin="souls"] .to-top { display: none; }
     .souls-map { top: 90px; right: 10px; grid-template-columns: repeat(2, 1fr); gap: 3px; }.souls-map button { min-width: 0; padding: 5px; font-size: 14px; text-align: center; }.souls-map button span { display: none; }
     .souls-pad { display: block; }.souls-prompt { bottom: 72px; min-width: 200px; }.souls-help { bottom: 25px; right: 12px; width: 160px; text-align: right; font-size: 10px; }
     .souls-panel { padding: 54px 19px 30px; }.souls-gallery { gap: 8px; } }
-@media (prefers-reduced-motion: reduce) { .souls-node::after, .souls-player.walking { animation: none; }.souls-panel { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .souls-panel { transition: none; } }
